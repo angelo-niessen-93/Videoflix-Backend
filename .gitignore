@@ -1,0 +1,60 @@
+# Local environment and credentials
+.env*
+!.env.example
+.venv/
+venv/
+env/
+.aws/
+.ssh/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python and tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.hypothesis/
+
+# Test output and coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+test-results/
+
+# Local databases and dumps
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.dump
+
+# Runtime storage and generated streaming media
+media/
+private_media/
+uploads/
+hls/
+thumbnails/
+staticfiles/
+*.mp4
+*.m4v
+*.mov
+*.mkv
+*.webm
+*.avi
+*.m3u8
+*.ts
+*.m4s
+
+# Local logs and operating system files
+*.log
+.DS_Store
+Thumbs.db
