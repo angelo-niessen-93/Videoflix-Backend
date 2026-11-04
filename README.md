@@ -8,7 +8,7 @@ directory. No Academy backend Docker files have been supplied. A separate,
 project-owned configuration is prepared in [deploy/](deploy/README.md);
 the isolated Docker infrastructure acceptance passed on 4 November 2026.
 See [VIDEOFLIX_DOD_REPORT.md](VIDEOFLIX_DOD_REPORT.md) for verified results and
-remaining submission and production preparation.
+the final Academy acceptance and remaining external limitations.
 
 ## Technology stack and features
 
@@ -179,7 +179,9 @@ references: white backgrounds, blue buttons, a centered activation logo and a
 left-aligned reset footer logo. The official SVG and its email-compatible PNG
 are in `templates/emails/assets/`; the PNG is attached inline with a Content-ID.
 Table layouts, inline styles and an Outlook VML button provide broad email
-compatibility. Actual Gmail/Outlook delivery and rendering remain untested. Links use:
+compatibility. Browser rendering passes at 320, 390 and 1024 pixels for
+both messages.
+Provider delivery and actual Gmail/Outlook rendering remain untested. Links use:
 
 ```text
 FRONTEND_URL/pages/auth/activate.html?uid=<uidb64>&token=<activation-token>
@@ -187,8 +189,12 @@ FRONTEND_URL/pages/auth/confirm_password.html?uid=<uidb64>&token=<reset-token>
 ```
 
 The route paths and `uid`/`token` query names were verified against the official
-frontend and exercised through the actual browser activation/reset pages. Tests always use
-Django's in-memory mail backend and never send real email. Console email output
+frontend and exercised through the actual browser activation/reset pages.
+Most tests use in-memory mail. `tests.test_smtp` additionally sends both message
+types through Django's actual SMTP backend to an ephemeral loopback-only sink.
+It uses no provider credentials, authentication or TLS and delivers no external
+mail. Docker acceptance separately verifies asynchronous file-based worker mail.
+Console email output
 contains live links during manual development; do not retain it in public logs.
 
 ## API endpoints
@@ -373,14 +379,15 @@ Docker Engine 29.9.2 and Compose v5.6.1 successfully built and started the
 isolated `videoflix-release-acceptance` stack on 4 November 2026. Live
 PostgreSQL persistence/migrations, Redis cache, independent RQ workers,
 local worker mail, FFmpeg/HLS, Nginx static/media and protected HTTP APIs
-passed. The full 122-test suite then passed again, including both real browser
-flows and nine FFmpeg tests, with 96% application coverage. See the
+passed. Controlled service restarts preserved database and media checksums.
+The final 129-test suite passed, including both real browser flows, two email
+rendering tests and eleven FFmpeg tests, with 97% application coverage. See the
 [verification report](VIDEOFLIX_DOD_REPORT.md) for detailed evidence.
 
 The retained stack uses private credentials in ignored `.env.acceptance` and
 contains only synthetic data. Inspect it with the commands in the Docker
-guide; preserve its volumes. The earlier Windows/WSL failure remains in the
-[historical diagnosis](deploy/WINDOWS_DOCKER_DIAGNOSIS.md).
+guide; preserve its volumes. General Windows/Docker troubleshooting is in
+[the diagnostic guide](deploy/WINDOWS_DOCKER_DIAGNOSIS.md), without machine data.
 
 ## Running tests and quality checks
 
@@ -407,7 +414,8 @@ python manage.py makemigrations --check --dry-run --settings=config.test_setting
 FFmpeg tests generate a short 1080p video with audio, produce all three variants,
 inspect the codecs, decode playlists, fetch segment references via the API,
 check failure handling and verify variant reuse. They skip explicitly only if
-FFmpeg/FFprobe are unavailable. All nine ran successfully in the recorded run.
+FFmpeg/FFprobe are unavailable. All eleven ran successfully in the final run,
+including real 720p no-upscaling and 360p failure/retained-original checks.
 
 To verify the same suite against PostgreSQL, use a dedicated non-production
 database configuration and a role allowed to create its `test_` database:
@@ -461,7 +469,8 @@ an isolated test thread to coexist with Playwright's event loop. No response
 interception, fake HLS responses, security-disabling browser flags or frontend
 script modifications are used.
 
-The default suite skips the two optional browser tests unless
+The default suite skips the four optional browser tests (two frontend flows
+and two mail-layout tests) unless
 `VIDEOFLIX_BROWSER_TESTS=1`; `--exclude-tag=browser` excludes them cleanly. The
 recorded full acceptance run enabled them. Evidence is written under the
 ignored `test-results/browser/` directory, with sensitive token paths redacted.
@@ -471,8 +480,11 @@ Known official frontend issue: reset-password blur validation references
 `confirmed_password`, while the page defines `repeated_password`. The browser
 records an uncaught null-reference error; submission and both login checks
 still succeed. This is documented without changing the official client.
-The frontend is therefore rated PARTIAL for complete polish, with both required
-integration workflows verified.
+This is an external frontend restriction; the correct backend reset flow is
+verified. Reproduce it with the `tests.test_passwords` module and
+`--settings=config.test_settings --noinput`, or run the real browser reset
+test with `VIDEOFLIX_BROWSER_TESTS=1`. See the precise request mapping and
+reproduction steps in [the final report](FINAL_ACADEMY_ACCEPTANCE.md).
 
 ## Troubleshooting
 
@@ -536,9 +548,31 @@ If the remote already contains commits, fetch and inspect its history before
 integrating; do not force-push over existing work. Repository visibility must
 also respect the usage restrictions of the supplied Academy assets.
 
-The release rerun on 4 November 2026 passed **122/122 tests**, with **96%**
-application coverage (775 statements, 28 missed). This includes the unchanged
-117 existing tests, two real browser workflows, nine FFmpeg integration tests
-and five infrastructure-acceptance safety/failure tests. Live Redis,
-PostgreSQL, independent workers and Nginx/API acceptance also passed separately.
-See the [push checklist](GITHUB_SUBMISSION_CHECKLIST.md) before submission.
+The final Academy run on 4 November 2026 passed **129/129 tests**, without
+skips or failures, with **97%** application coverage (775 statements, 27 missed).
+All 122 previous tests remain. Added tests cover actual local SMTP delivery,
+mobile/desktop email layouts, lower-resolution video processing and logout.
+Live PostgreSQL/Redis, independent workers, restarts and Nginx/API checks also
+passed separately. See [the final report](FINAL_ACADEMY_ACCEPTANCE.md) and
+[push checklist](GITHUB_SUBMISSION_CHECKLIST.md).
+
+## Academy attribution and publication scope
+
+**Entwickelt im Rahmen des Weiterbildungsprogramms der Developer Akademie GmbH.**
+
+The official frontend is provided by Developer Akademie and remains in a
+separate unchanged repository. This backend includes only the Academy-supplied
+Videoflix email logo (`templates/emails/assets/logo.svg`), its PNG derivative,
+and email layouts based on the supplied design references. The unchanged
+[Developer Akademie learning license](LICENSE_ACADEMY.md) applies to those
+supplied or derived components. This notice assigns no new license to the
+independently authored backend code.
+
+The Academy submission requires the backend GitHub link; public hosting,
+a domain and a live demo are not required. The official frontend contains
+Imprint and Privacy Policy pages with example/placeholder content. Before
+any separate public deployment, replace those placeholders with appropriate
+operator information and review the Academy asset/publication conditions.
+No legal-page backend endpoints or hosting changes are needed for this task.
+The configured GitHub repository currently has public visibility; visibility
+was inspected only and was not changed.

@@ -1,229 +1,286 @@
-# Videoflix – Final Release und GitHub-Abgabe
+# Videoflix – finale Academy-Abnahme
 
-Prüfdatum: **4. November 2026**, Europe/Berlin.
+Prüfdatum: **4. November 2026**, Europe/Berlin. Prüfbasis: der im Auftrag
+bereitgestellte Academy-Anforderungskatalog, vorhandener Backend-Code und der
+unveränderte offizielle Frontend-Checkout bei `eec23e014aabefacb22c02dbf1532aa3857ddd75`.
+Ein separater Zugang zur Academy-Lernplattform und dort möglicherweise separat
+bereitgestellte Docker-Originaldateien liegen nicht vor.
 
-## Ergebnis und Grenzen
+## Ergebnis und Abgabereife
 
-**122 Tests gefunden, 122 bestanden, 0 übersprungen, 0 fehlgeschlagen.**
-Die unveränderte vollständige Suite lief nach der Docker-Abnahme erneut mit
-`VIDEOFLIX_BROWSER_TESTS=1`: 27,191 Sekunden, beide echten Browserabläufe und
-neun FFmpeg-Integrationstests erfolgreich. **Coverage accounts/videos/config:
-96 %**, 775 Statements, 28 nicht ausgeführt. Der operative Live-Test wird
-separat ausgewertet und gehört nicht zu dieser Coverage-Messung.
+**129 Tests bestanden, 0 fehlgeschlagen, 0 übersprungen**, Laufzeit 22,167 s.
+Alle bisherigen 122 Tests bleiben unverändert erhalten; sieben gezielte
+Zusatztests schließen tatsächliche Nachweislücken. **Coverage 97 %** bei
+vergleichbarer Messung: 775 Anwendungsstatements, 27 nicht ausgeführt
+(vorher 28/775 und gerundet 96 %). Tests und operative Skripte sind nicht
+Teil der Anwendungscoverage.
 
-**32 Anforderungen: 29 PASS, 3 PARTIAL, 0 FAIL, 0 BLOCKED.**
-Die bisher blockierte Docker-/PostgreSQL-/Redis-/Worker-Infrastrukturabnahme
-ist erfolgreich abgeschlossen. Technisch ist der lokale Docker-Stack für
-die GitHub-Abgabe geprüft. SMTP/Mailclient-Rendering, der bekannte offizielle
-Frontendfehler und Produktionshärtung bleiben ausdrücklich offen.
+Die vollständige untenstehende Matrix umfasst die **42 Einzelpunkte aus
+Abschnitt 18 des Auftrags plus einen ausdrücklich externen Frontendbefund**:
+**41 PASS, 1 PARTIAL, 1 NOT APPLICABLE, 0 FAIL, 0 BLOCKED**. Sie ersetzt die
+frühere gröbere 32-Punkte-Tabelle; die unterschiedlichen Zählungen dürfen
+nicht als zusätzliche umgesetzte Funktionen interpretiert werden.
 
-## Umgesetzt
+**Das Backend ist für die beschriebene lokale Academy-GitHub-Abgabe technisch
+vorbereitet.** Der externe Reset-Blurfehler bleibt transparent PARTIAL.
+Ein fehlender Bytevergleich mit nicht gelieferten Docker-Originalen wird
+nicht als PASS ausgegeben. Öffentliches Hosting ist kein Abgabekriterium.
+Der finale GitHub-Push bleibt ausdrücklich separat freizugeben.
 
-- Bestehende Implementierung und alle Tests weiterverwendet.
-- Eigene Docker-Konfiguration unter deploy/: Gunicorn, PostgreSQL, Redis,
-  getrennte RQ-Worker mit Retry-Schedulern, FFmpeg und Nginx.
-- Healthchecks für Datenbank, Redis, Web und Gateway; Migration/collectstatic
-  vor Anwendungsstart; persistente, projektgebundene Volumes.
-- Web und Worker teilen Medien; Gateway erhält nur öffentliche Thumbnails
-  und Static-Dateien, keinen Zugriff auf Originale oder private HLS-Dateien.
-- Nicht privilegierter Anwendungsbenutzer und Gateway, nur Loopback-Port 8000.
-- Sichere Mail-Abnahme mit dateibasiertem Backend; keine SMTP-Zustellung.
-- Explizite SECURE_SSL_REDIRECT-Konfiguration mit unverändert sicherem
-  Standard außerhalb Debug, für dokumentiertes lokales HTTP im Compose-Setup.
-- Operativer Abnahmetest scripts/verify_infrastructure.py: echte Datenbank,
-  Redis-Cache, registrierte Worker, lokale Worker-Mail, Admin-Upload,
-  asynchrone Konvertierung, Thumbnail, Dashboard und alle HLS-Varianten.
-- Schutz vor SQLite, normal benannten Datenbanken und SMTP in diesem Test;
-  fünf automatisierte Schutz-/Fehlerprüfungen erfolgreich. Der Test schreibt
-  ausschließlich synthetische Daten in eine explizit isolierte Abnahmeumgebung.
-- Docker-Anleitung und GITHUB_SUBMISSION_CHECKLIST.md ergänzt.
+## Tatsächliche Änderungen und Codeprüfung
 
-## Tatsächlicher Infrastrukturzustand
+- Anwendungscode, Migrationen, Dockerfile, Compose und Nginx-Konfiguration
+  mussten nicht geändert werden; kein Refactoring, keine neue Abhängigkeit.
+- Sieben Zusatztests: zwei echte loopback-SMTP-Übertragungen, zwei Browser-
+  Mailrenderings bei je 320/390/1024 px, reale 720p-/360p-Quellvideoverarbeitung
+  und Zugriffsschutz unmittelbar nach Logout.
+- SMTP-Testhilfe ausschließlich unter `tests/smtp_support.py`, ohne externen
+  Mailversand oder zusätzliche SMTP-Frameworks.
+- README, Deployment-Anleitung, Abgabecheckliste und Abschlussberichte aktualisiert.
+- Konkrete lokale Windows-Diagnose vor der Bereinigung unter ignoriertem
+  `test-results/` erhalten. Im aktuellen Quellbaum nur allgemeine Anleitung
+  ohne Hardwaredetails, Systemprotokolle oder Diagnosepaketkennungen.
+- Academy-Attribution und unveränderte Lizenzbeilage für übernommene Mailassets
+  und abgeleitete Designbestandteile ergänzt. Originaldateien des Frontends
+  bleiben unverändert.
 
-Docker Engine 29.9.2 (Linux), Compose v5.6.1, Context desktop-linux.
-Vor dem Start waren keine Container oder Volumes vorhanden; die bestehenden
-Standardnetzwerke blieben unverändert. Der Projektname und Port 8000 waren
-frei. Das neue Projekt `videoflix-release-acceptance` verwendet ausschließlich
-die dedizierte Datenbank und Rolle `videoflix_acceptance`, sechs eigene
-projektgebundene Volumes und ein eigenes Netzwerk. Zufällige sichere Secrets
-liegen nur in der ignorierten `.env.acceptance`; keine Werte werden hier
-oder in Git dokumentiert. Ausschließlich synthetische Benutzer und Medien.
+Alle relevanten Python-Module einschließlich Migrationen, Testhilfen und
+operativen Skripten wurden gelesen. Die ergänzende AST-Auswertung erfasst
+80 Anwendungsfunktionen mit maximal 14 physischen Zeilen. Die verbindlich
+verwendete Messung ist `end_lineno - lineno + 1` im bestehenden
+`scripts/check_code_rules.py`; Leer-/Kommentarzeilen innerhalb einer Funktion
+zählen mit. Framework-Hooks und Django-Testnamen sind berücksichtigt.
+Ruff und die manuelle Referenzprüfung fanden keinen konkreten ungenutzten
+Anwendungshelfer oder auskommentierten Altcode. Die manuelle SRP-Prüfung
+bestätigt die bestehende Aufteilung von HTTP, Validierung, Services, Tasks,
+Pfad-/Cachehilfen und FFmpeg; sie ist keine pauschale formale Architekturbeweisführung.
 
-`docker compose --env-file .env.acceptance -p videoflix-release-acceptance
--f deploy/compose.yaml up --build --wait --wait-timeout 180` war erfolgreich.
-Es waren keine Korrekturen an Anwendungscode, Dockerfile oder Compose nötig.
+## Erneut ausgeführte Prüfungen
 
-| Dienst | Ergebnis |
+| Prüfung | Tatsächliches Ergebnis |
 |---|---|
-| PostgreSQL | läuft, healthy; 35 Migrationen angewendet, kein offener Migrationsplan |
-| Redis | läuft, healthy; PONG und echter Cache-Schreib-/Lesezyklus erfolgreich |
-| Django/Gunicorn | läuft, healthy; zwei Gunicorn-Worker, echte HTTP-API erreichbar |
-| RQ Default Worker | eigener Container/Prozess, registriert; Scheduler aktiv, Mailjob erfolgreich |
-| RQ Video Worker | eigener Container/Prozess, registriert; Scheduler aktiv, Videojob erfolgreich |
-| Nginx Gateway | läuft, healthy; ausschließlich 127.0.0.1:8000 veröffentlicht |
-| migrate | erwartungsgemäß Exited (0); Migrationen und 164 Static-Dateien erfolgreich |
-
-Worker haben keinen eigenen Compose-Healthcheck; ihre Funktion wurde durch
-Registrierung, Containerlogs und tatsächlich abgeschlossene Jobs geprüft.
-
-`scripts.verify_infrastructure.main()` meldet
-`PASS: PostgreSQL, Redis, RQ, email, admin and HLS`. Geprüft wurden echte
-PostgreSQL-ORM-Persistenz, Redis PING/Cache, beide Queue-Worker, asynchrone
-Reset-Mail in das private Datei-Mail-Volume, Admin-Upload eines generierten
-1080p-Videos, asynchrone FFmpeg-Konvertierung, Thumbnail, Dashboard sowie
-480p/720p/1080p. Jede Variante wurde mit FFmpeg vollständig decodiert.
-Separate SQL-Abfragen bestätigten einen persistierten Mailjob `sent` und
-ein Video `ready` nach Abschluss des Abnahmeskriptprozesses.
-
-Die zusätzliche echte HTTP-Prüfung vom Web-Container über Nginx zu Gunicorn
-bestätigte Cookie-Login, API-Liste, CSRF-Endpunkt, Admin-CSS und JPEG-Thumbnail
-mit HTTP 200. Für jede HLS-Auflösung wurden Playlist und MPEG-TS-Segment
-mit Authentifizierung abgerufen: korrekte MIME-Typen, private/no-store für
-Playlists sowie TS-Syncbyte und Paketlänge erfolgreich. Insgesamt drei
-Segmente aus dem kurzen synthetischen Clip wurden geprüft. Anonyme API-,
-Playlist- und Segmentrequests lieferten 401; private Uploadpfade und deren
-unzulässige öffentliche Medienpfade lieferten 404.
-
-Für die unveränderte Browser-Suite wurde ausschließlich der Gateway
-vorübergehend gestoppt, damit deren isolierter Live-Testserver Port 8000
-verwenden konnte. Danach wurde der Gateway wieder gestartet; CSRF-API und
-Admin-CSS wurden zusätzlich vom Windows-Host über 127.0.0.1:8000 mit HTTP 200
-geprüft. Browser-Tests nutzen weiterhin ihre isolierte SQLite-/fakeredis-
-Testumgebung; die echte PostgreSQL-/Redis-/Worker-Prüfung erfolgte separat
-im Docker-Stack. Diese Nachweise werden nicht miteinander gleichgesetzt.
-
-Der historische Windows-/WSL-Fehler ist in
-[deploy/WINDOWS_DOCKER_DIAGNOSIS.md](deploy/WINDOWS_DOCKER_DIAGNOSIS.md)
-festgehalten und blockiert diese Abnahme nicht mehr. Keine Windows-, BIOS-
-oder Docker-Desktop-Einstellungen geändert, keine Volumes gelöscht.
-
-## Offizielle Docker-Dateien und Frontend
-
-Die vollständige offizielle GitHub-Dateiliste (nicht abgeschnitten) wurde
-am Prüfdatum erneut abgefragt, SHA eec23e014aabefacb22c02dbf1532aa3857ddd75.
-Sie enthält keine Docker- oder Compose-Dateien. Auch der separate lokale
-Frontend-Checkout enthält keine solchen getrackten Dateien. Die
-[offizielle README](https://github.com/Developer-Akademie-Backendkurs/project.Videoflix/blob/main/readme.md)
-verlangt ein Docker-Django-Backend und sagt ausdrücklich, dass es nicht im
-Frontend-Projekt enthalten ist. Ein eigenes Backend-Setup passt zu dieser
-Quelle. Eine eventuell an anderer Stelle vorgeschriebene unveränderliche
-Academy-Vorlage muss separat bestätigt werden. Die eigenen Dateien ersetzen
-keine bereitgestellten Academy-Dateien.
-
-Das offizielle Frontend blieb unverändert im separaten
-Checkout `../Videoflix-Frontend` (Git-Status vor und nach der Abnahme sauber).
-Zwei tatsächliche Browserabläufe bestanden erneut: Registrierung, Aktivierung, Login, Dashboard, Thumbnail,
-decodierte Wiedergabe in 480p/720p/1080p, zeitgesteuerter Refresh und Logout;
-sowie Reset-Anforderung, Test-Mail-Link, Passwortwechsel und Prüfung von
-altem/neuem Login. Cookies, CORS und CSRF-/Origin-Verhalten werden von Browser-
-und Negativtests abgedeckt. Browser-Mails laufen mit fakeredis, keinem
-separaten Redis-Prozess; Antworten und HLS-Wiedergabe werden nicht simuliert.
-
-Bekannter offizieller Reset-Fehler: Blur-Validierung greift auf
-confirmed_password zu, das Formular enthält repeated_password. Der Browser
-meldet `Cannot read properties of null (reading 'value')`. Absendung und
-Passwortwechsel funktionieren; die Originaldateien wurden nicht angepasst.
-SMTP sowie echtes Gmail-/Outlook-Rendering sind weiterhin nicht geprüft.
-
-## Abschließende Prüfungen
-
-| Prüfung | Ergebnis |
-|---|---|
-| Ruff check | PASS |
-| Ruff format --check | PASS |
-| AST: höchstens 14 physische Zeilen/Funktion und snake_case | PASS |
-| Django System Check | PASS, keine Befunde |
-| Deployment Check mit Produktions-Sicherheitseinstellungen | PASS, keine Befunde; kein Hostingnachweis |
-| makemigrations --check --dry-run | PASS, keine Modelländerungen |
-| Vollständige Suite mit VIDEOFLIX_BROWSER_TESTS=1 | PASS, 122/122, keine Skips |
-| Coverage accounts/videos/config | 96 %, 775 Statements, 28 Misses |
-| FFmpeg inklusive FFprobe und realer Decodierung | PASS, neun bestehende Integrationstests |
-| Offizielle Browserabläufe | PASS, beide erneut bestanden |
+| Gesamtsuite mit `VIDEOFLIX_BROWSER_TESTS=1` | PASS, 129/129, keine Skips |
+| Reale offizielle Browserabläufe | PASS, Registrierung/Aktivierung/Login/HLS/Refresh/Logout und Reset/altes-neues Login |
+| Reale FFmpeg-Tests | PASS, elf Tests einschließlich Decodierung, AAC, kleinere Quellen und Fehlerfälle |
+| SMTP | PASS, Aktivierung und Reset via echtem Django-SMTP-Backend an privaten Loopback-Sink |
+| Mail-Rendering | PASS, beide Templates bei 320/390/1024 px; Linkziel, Button, Logo und kein horizontaler Überlauf |
+| Ruff / Ruff format | PASS, 75 Python-Dateien formatiert |
+| 14-Zeilen-/snake_case-Prüfung | PASS |
+| Django-Systemcheck | PASS, keine Befunde |
+| Django-Deploymentcheck | PASS mit `config.deploy_check_settings`; kein Hostingnachweis |
+| Migrationen | PASS, keine Modelländerungen, 35 Migrationen angewendet, kein offener Migrationsplan |
 | pip check | PASS |
-| docker compose config --quiet | PASS, nur statische Validierung |
-| Tatsächlicher Containerstart | PASS, Build/Start und alle vorhandenen Healthchecks erfolgreich |
-| Live PostgreSQL-/Redis-/Worker-Abnahmetest | PASS, echte Jobs, Mail und FFmpeg/HLS erfolgreich |
-| Nginx/Gunicorn HTTP | PASS, API, CSS, JPEG, alle HLS-Varianten und Zugriffsschutz |
+| Live-Infrastrukturskript | PASS, PostgreSQL, Redis, getrennte RQ-Worker, Dateimail, Admin und HLS |
+| Neustartfähigkeit | PASS, sechs Dienste kontrolliert neu gestartet; DB-/Medienprüfsummen unverändert |
+| Nginx/Gunicorn HTTP | PASS, Login/API/CSRF/CSS/JPEG/HLS/TS und Negativprüfungen |
+| Anwendung/Docker/Frontend | Keine Änderungen gegenüber der vorhandenen geprüften Implementierung |
 
-Die finalen Einzelprüfungen und die vollständige Suite verwenden dieselben
-Tests wie zuvor; kein Test wurde entfernt, abgeschwächt oder umgangen.
-Der vorbereitete operative Test prüft Django-Views über den echten Django
-Test Client und Worker separat. Ein expliziter Gateway-HTTP-Check und die
-separate Playwright-Suite ergänzen ihn; er ersetzt keine Browserabnahme.
+## Docker und Datenpersistenz
 
-## Alle 32 Anforderungen
+Der vorhandene Stack `videoflix-release-acceptance` wurde wiederverwendet,
+nicht neu aufgebaut oder zurückgesetzt. PostgreSQL-Datenbank und Rolle sind
+`videoflix_acceptance`. Zugangsdaten bleiben in der ignorierten `.env.acceptance`.
+Docker Engine 29.9.2, Compose v5.6.1, Linux-Engine.
 
-| Anforderung | Status | Nachweis |
-|---|---|---|
-| Clean Code | PASS | Trennung von HTTP, Validierung, Services und Tasks; Ruff und 122 Tests erfolgreich |
-| Maximal 14 Zeilen pro Funktion | PASS | AST-Prüfung einschließlich neuer Browserhelfer erfolgreich |
-| PEP 8 | PASS | Ruff und Formatprüfung erfolgreich |
-| README | PASS | Englische Einrichtung, offizieller Vertrag, CSRF-Policy, Browsertests und Grenzen dokumentiert |
-| Django REST Framework | PASS | API- und echte Netzwerk-/Browserrequests erfolgreich |
-| PostgreSQL | PASS | Docker-PostgreSQL, 35 Migrationen und persistierte ORM-Daten erfolgreich |
-| Redis | PASS | Docker-Redis PONG, echter Cache-Roundtrip und reale Queues erfolgreich |
-| Django RQ | PASS | Zwei unabhängige Worker mit Schedulern, Mail- und Videojob erfolgreich |
-| Docker | PASS | Eigene Images gebaut, isolierter Stack gestartet, Healthchecks und Live-Abnahme erfolgreich |
-| Registrierung | PASS | Bestehende Tests plus tatsächliches offizielles Browserformular, HTTP 201 |
-| Account-Aktivierung | PASS | Ablauf/Zweck/Wiederholung getestet; offizieller E-Mail-Link im Browser aktiviert |
-| Login | PASS | Tatsächliches Formular, E-Mail-Login und HttpOnly-Cookies geprüft |
-| Logout | PASS | Browser 200 und Cookie-Löschung; Regression prüft Blacklist/Wiederverwendung |
-| Token Refresh | PASS | 30-Minuten-Token geprüft; echter Frontend-Timer mit virtueller Zeit liefert 200 |
-| Passwort-Reset | PASS | Generische Antworten, tatsächlicher Test-Mail-Link und offizielles Formular erfolgreich |
-| Passwortänderung | PASS | Neues Passwort gespeichert; Browser: altes Login 400, neues Login 200 |
-| Videoliste | PASS | Korrektes Array, Schutz, unfertige Einträge und reales Dashboard geprüft |
-| Sortierung DESC | PASS | Regressionstest mit neuerem/älterem Video erfolgreich |
-| Kategorien | PASS | API-Feld getestet; offizielles Dashboard gruppiert die gelieferten Werte |
-| Thumbnails | PASS | Echte Generierung/Bildprüfung und Thumbnail-Abruf im Browser 200 |
-| FFmpeg | PASS | Reale Konvertierung, Decodierung, Fehlerbehandlung und Wiederverwendung geprüft |
-| HLS 480p | PASS | FFmpeg-/API-Prüfungen und tatsächliche Browserwiedergabe mit videoHeight=480 |
-| HLS 720p | PASS | FFmpeg-/API-Prüfungen und tatsächliche Browserwiedergabe mit videoHeight=720 |
-| HLS 1080p | PASS | FFmpeg-/API-Prüfungen und tatsächliche Browserwiedergabe mit videoHeight=1080 |
-| Geschützte Playlists | PASS | JWT, Fehlerfälle, MIME-Type und echte HLS.js-Requests erfolgreich |
-| Geschützte Segmente | PASS | Traversal-/Dateinamenprüfungen und tatsächlich decodierte Browsersegmente |
-| E-Mail-Versand | PARTIAL | Offizielles Design, MIME/Plaintext, responsive Vorschau und Testzustellung geprüft; SMTP/Mailclients offen |
-| Frontend-Kompatibilität | PARTIAL | Beide geforderten Browserabläufe erfolgreich; bestehender Reset-JavaScript-Fehler bleibt unverändert dokumentiert |
-| API-Tests | PASS | Unveränderte vollständige Suite: 122/122; zusätzliche echte Gateway-HTTP-Prüfung erfolgreich |
-| Sicherheit | PARTIAL | CSRF-/Origin-Negativfälle, Cookies, Blacklist, Tokens und private Medien geprüft; Produktion/HTTPS/Proxy offen |
-| Backend-only Repository | PASS | Getrennter Frontend-Checkout; im Backend nur notwendige E-Mail-Logoassets |
-| Docker-Dateien unverändert | PASS | Keine Academy-Docker-Dateien vorhanden; eigene bestehende Docker-Konfiguration bei dieser Abnahme unverändert |
+| Dienst | Status / Funktionsnachweis |
+|---|---|
+| db | läuft, healthy; PostgreSQL-Persistenz und 35 Migrationen |
+| redis | läuft, healthy; PING/Cache und reale Queues |
+| web | läuft, healthy; Gunicorn und echte HTTP-API |
+| worker-default | läuft; eigene Registrierung/Scheduler und abgeschlossener Mailjob |
+| worker-video | läuft; eigene Registrierung/Scheduler und abgeschlossener FFmpeg-Job |
+| gateway | läuft, healthy; nur 127.0.0.1:8000 veröffentlicht |
+| migrate | erwartetes Exited (0), Migrationen/collectstatic erfolgreich |
+
+Die Worker besitzen keinen Compose-Healthcheck; ihre Funktion wurde durch
+Registrierung und echte Jobs nachgewiesen. Vor/nach dem kontrollierten
+Neustart waren Hashes aller bestehenden Benutzer-/Mailjob-/Video-Datensätze
+und sämtlicher öffentlicher/privater Medien sowie lokaler Maildateien identisch.
+Die sechs Volumes blieben erhalten. Das erneute Live-Skript fügte anschließend
+nur neue synthetische Testdaten hinzu. Es gab keinen Reset und keine Löschung.
+Der Gateway wurde für die Browser-Suite kurz gestoppt und danach wieder gestartet.
+
+## Authentifizierung und Passwort-Reset
+
+Registrierung hasht Passwörter über Django, setzt Benutzer zunächst inaktiv
+und plant Aktivierungsmail nach Transaktionscommit. Login nutzt E-Mail und
+HttpOnly-JWT-Cookies unter `/api/`; inaktive und ungültige Logins werden generisch
+abgelehnt. CORS und die eingeschränkte Origin-/JSON-CSRF-Policy sind mit
+Positiv-/Negativtests und echten Browserrequests geprüft.
+
+Logout blacklisted den serverseitig kontrollierten Refresh-Token und löscht
+beide Backend-Cookies. Danach hat der normale Client keinen geschützten Zugriff.
+Ein vor Logout kopierter stateless Access-Token bleibt bis zu seiner 30-Minuten-
+Frist gültig; das ist eine dokumentierte Grenze und keine Behauptung eines
+sofortigen globalen Access-Token-Widerrufs. Passwortwechsel widerrufen über den
+Passwortzustandsclaim dagegen auch alte Access- und Refresh-Tokens.
+Das offizielle Frontend speichert keine zusätzlichen Auth-Tokens; seine UI
+beendet den Refresh-Timer und übernimmt die Weiterleitung nach Logout.
+
+Der externe Resetfehler liegt in `shared/js/auth.js::validatePW` (Zeilen 115/116
+im geprüften Checkout): `document.getElementById("confirmed_password")` liefert
+auf `pages/auth/confirm_password.html` null, weil dort `repeated_password`
+definiert ist. Beim Blur wird trotzdem `.value` gelesen. Der Fehler tritt
+vor dem Request auf; er wird durch keine Änderung des Backends behoben.
+
+`confirmPasswordSubmit` übersetzt dagegen korrekt:
+
+| Schritt | Tatsächlicher Vertrag |
+|---|---|
+| Reset anfordern | POST `/api/password_reset/`, JSON `{ "email": "synthetic@example.invalid" }`; generisch 200 |
+| Link aus Mail | `/pages/auth/confirm_password.html?uid=<uid>&token=<token>` |
+| Formular | HTML-Felder `password` und `repeated_password` |
+| Absenden | POST `/api/password_confirm/<uid>/<token>/`, JSON `new_password` und `confirm_password` |
+| Erfolg | 200; altes Login 400, neues Login 200; Tokenwiederholung 400 |
+
+Reproduktion des externen Fehlers: offizielle Resetseite mit gültigem Testlink
+öffnen, Passwort ausfüllen und per Tab verlassen; Konsole zeigt
+`Cannot read properties of null (reading 'value')`. Das Formular lässt sich
+weiter absenden; der reale Browsertest bestätigt den erfolgreichen Backend-Flow.
+Es wurde kein Frontend-Code, Request oder HLS-Response ersetzt oder abgefangen.
+
+Reproduzierbare korrekte Backendprüfung aus dem Backendverzeichnis:
+
+```powershell
+.venv/Scripts/python.exe manage.py test tests.test_passwords tests.test_frontend_contract --settings=config.test_settings --noinput
+# Vor dem folgenden Live-Browsertest den Abnahme-Gateway stoppen (Port 8000):
+docker compose --env-file .env.acceptance -p videoflix-release-acceptance -f deploy/compose.yaml stop gateway
+$env:VIDEOFLIX_BROWSER_TESTS='1'
+.venv/Scripts/python.exe manage.py test tests.test_browser_integration.BrowserIntegrationTests.test_forgot_password_reset_and_login --settings=config.test_settings --noinput
+docker compose --env-file .env.acceptance -p videoflix-release-acceptance -f deploy/compose.yaml start --wait gateway
+```
+
+API-Tests prüfen außerdem Ablauf, Zweckbindung, Einmaligkeit, Eingabevalidierung,
+sichere Hashspeicherung und alte/neue Logins. Tokenwerte und Cookies werden
+nicht in den Abgabebericht oder öffentliche Logs übernommen.
+
+## E-Mail und bisherige PARTIAL-Punkte
+
+| Bisheriger Punkt | Neue Bewertung und Grenze |
+|---|---|
+| E-Mail-Versand | PASS für die Academy-Backendfunktion: beide Nachrichtentypen, Text/HTML/CID-Logo, richtige Frontendlinks, echte lokale SMTP-Übertragung und separate asynchrone RQ-Dateimail erfolgreich |
+| Sicherheit | PASS für die lokale Backend-Abgabe: Cookie-/JWT-/CSRF-/Origin-/Pfadschutz, Tokens, Hashes, private Medien und Negativfälle geprüft; kein kommerzieller Produktionsaudit behauptet |
+| Frontend-Kompatibilität | Backend-Verträge und beide geforderten Browserflows PASS; externer Reset-Blurfehler bleibt als eigener PARTIAL-Befund erhalten |
+
+Die beiden neuen SMTP-Tests verwenden den tatsächlichen Django-Backendtransport
+und einen nur an 127.0.0.1 gebundenen temporären Socketserver. Sie verwenden
+keine Anbieter-Zugangsdaten, SMTP-AUTH oder TLS. Providerzustellung, Spamfilter,
+TLS/Auth bei einem Anbieter und echtes Gmail-/Outlook-Rendering sind ausdrücklich
+**nicht verifiziert** und kein zusätzliches Pflichtkriterium dieser lokalen
+Abnahme. HTML-Struktur/VML/Textfallback sind separat getestet; die beiden
+Layouttests ersetzen ausschließlich für die Browservorschau CID durch dieselbe
+PNG als Data-URL. Mobile Aktivierung und Desktop-Reset wurden auch visuell geprüft.
+
+## Videoverarbeitung
+
+Nur Staff-Adminuploads, erlaubte MP4/MOV/MKV/WebM-Endungen und zufällige private
+Dateinamen; Nginx begrenzt Requests auf 2 GiB. Es wird kein zusätzlicher,
+ungetesteter Content-Validator oder öffentliches Upload-API behauptet.
+Beschädigte Inhalte scheitern kontrolliert im Worker und werden nicht publiziert.
+Die API plant Jobs nach Commit und führt FFmpeg nicht synchron im Request aus.
+
+Reale kleine 1080p-Clips erzeugen H.264/AAC, Thumbnails und alle drei Varianten;
+Playlists werden vollständig decodiert. Die neue echte 720p-Quelle erzeugt nur
+480p/720p, keine 1080p-Dateien. Eine echte 360p-Quelle wird als failed erfasst,
+Original bleibt erhalten, Thumbnail und Varianten bleiben unveröffentlicht.
+Retry-/Wiederverwendung, Pfadgrenzen und ungültige Dateien sind getestet.
+Die echte HTTP-Prüfung über Nginx bestätigt MIME-Typen, private/no-store,
+MPEG-TS-Paketstruktur und anonyme 401 für Playlists/Segmente; direkte private
+Uploadpfade bleiben 404. Die beiden Browserflows verwenden weiterhin die
+isolierte SQLite-/fakeredis-Testumgebung; PostgreSQL/RQ wurden separat real
+im wiederverwendeten Docker-Stack geprüft.
+
+## Vollständige DoD-Matrix
+
+| Bereich | Anforderung | Status | Konkreter Nachweis |
+|---|---|---|---|
+| Clean Code | Funktionen maximal 14 Zeilen | PASS | `scripts/check_code_rules.py`; AST: 80 Anwendungsfunktionen, maximal 14 physische Zeilen; alle Tests/Hilfsskripte ebenfalls geprüft |
+| Clean Code | Single Responsibility | PASS | Manuelle Prüfung: `accounts/services.py`, `accounts/tasks.py`, `videos/services.py`, `videos/ffmpeg.py`; HTTP bleibt in Views |
+| Clean Code | snake_case | PASS | AST-Prüfung in `scripts/check_code_rules.py`; nur dokumentierte Django-Testhooks ausgenommen |
+| Clean Code | Sprechende Namen | PASS | Manuelles Review sämtlicher Module unter `accounts/`, `videos/`, `config/` und `scripts/`; kein konkreter Verstoß gefunden |
+| Clean Code | Keine ungenutzten Deklarationen | PASS | Ruff F401/F841 und manuelle Referenzprüfung; Django-/Signal-/Migration-Hooks als Framework-Einstiegspunkte berücksichtigt |
+| Clean Code | Kein auskommentierter Altcode | PASS | Manuelles Review der Python-Module; keine stillgelegten Implementierungen gefunden |
+| Dokumentation | Dokumentation vorhanden | PASS | `README.md`, `deploy/README.md`, dieser Bericht, `FINAL_ACADEMY_ACCEPTANCE.md`, Abgabecheckliste |
+| Dokumentation | Aussagekräftiges README | PASS | Voraussetzungen, Docker, Administrator, alle Endpunkte, Mail, HLS, Tests und Grenzen in `README.md` |
+| Django | Richtige Dateistruktur | PASS | Apps `accounts/`, `videos/`; `config/`, Migrationen, Templates, getrennte Tests und Deploymentdateien |
+| Django | Views enthalten nur View-Verantwortung | PASS | `accounts/views.py` und `videos/views.py`: Validierung delegiert, HTTP-Status/Response/Cookies in Views |
+| Django | Hilfsfunktionen ausgelagert | PASS | `accounts/services.py`, `tokens.py`, `csrf.py`; `videos/paths.py`, `utils.py`, `services.py`, `ffmpeg.py` |
+| Python | PEP-8-Konformität | PASS | `python -m ruff check .` und `python -m ruff format --check .`: erfolgreich |
+| Architektur | Getrenntes Backend und Frontend | PASS | Offizieller Checkout separat; Git-Status davor/danach unverändert; keine Frontend-App im Backend |
+| Architektur | REST-API mit DRF | PASS | `config/settings.py::REST_FRAMEWORK`, `accounts/urls.py`, `videos/urls.py`; Vertrags- und echte HTTP-Tests |
+| Architektur | Django RQ | PASS | `config/jobs.py::queue_task`, getrennte Default-/Video-Worker mit Scheduler; reale Jobs erneut abgeschlossen |
+| Architektur | Redis | PASS | `scripts/verify_infrastructure.py::verify_redis`: echtes PING, Cache-Roundtrip und Workerregistrierung |
+| Architektur | PostgreSQL | PASS | Docker benutzt PostgreSQL, 35 Migrationen; ORM-Daten und Medien nach Dienstneustart unverändert |
+| Architektur | Docker-Start | PASS | Bestehenden Stack erneut geprüft und kontrolliert neu gestartet; `deploy/compose.yaml` unverändert |
+| Registrierung | Benutzererstellung | PASS | `RegistrationTests.test_success_structure_and_inactive_hashed_password`; Runtime-Passworthasher PBKDF2 |
+| Registrierung | Inaktiver Account | PASS | `register_user(...is_active=False)`; `AuthenticationTests.test_inactive_account` |
+| Registrierung | Aktivierungsmail | PASS | `RegistrationTests.test_activation_email_has_frontend_uid_and_token`; `SmtpDeliveryTests.test_activation_delivered_over_local_smtp` |
+| Registrierung | Frontend-Aktivierungslink | PASS | `OfficialEmailTests.test_official_activation_page_and_query_parameters`; echter Browserablauf |
+| Registrierung | Accountaktivierung | PASS | `RegistrationTests.test_valid_activation`, Tokenablauf/-zweck/-wiederholung und echter Browserablauf |
+| Authentifizierung | Login | PASS | `AuthenticationTests` und echter Browser: E-Mail/Passwort, HttpOnly-Cookies; inaktiv/falsch/unbekannt abgelehnt |
+| Authentifizierung | Fehlerbehandlung | PASS | `test_invalid_credentials_are_generic`, ungültige Tokens, Redis-/Mail-/FFmpeg-Ausfälle; keine Rohfehler in API |
+| Authentifizierung | Logout | PASS | `test_successful_logout_deletes_cookies_and_blacklists`, neuer `test_logout_removes_access_to_protected_resources` und echter Browser |
+| Authentifizierung | Zugriffsschutz | PASS | `CsrfTests`, `FrontendRequestTests`, `HlsTests`; echte Nginx-Requests anonym 401, private Uploadpfade 404 |
+| Passwort-Reset | Reset-Anforderung | PASS | `PasswordTests.test_generic_reset_response`, inaktive/unbekannte Benutzer, ungültige E-Mail |
+| Passwort-Reset | E-Mail | PASS | `test_reset_mail_contains_valid_frontend_link`; echter RQ-Dateimailjob und `SmtpDeliveryTests.test_reset_delivered_over_local_smtp` |
+| Passwort-Reset | Frontend-Link | PASS | `OfficialEmailTests.test_official_reset_page_and_query_parameters`; uid/token im echten Browser übernommen |
+| Passwort-Reset | Sichere Passwortänderung | PASS | `PasswordTests`: Validierung, Hash, altes/neues Login, Ablauf, Einmaligkeit, Zweck und Widerruf alter JWTs |
+| Videos | Video-Dashboard | PASS | `VideoListTests`, `VideoSerializer`; echter Browser zeigt Titel/Beschreibung/Thumbnail und spielt Video ab |
+| Videos | Genregruppierung | PASS | `VideoListTests.test_category_thumbnail_and_order`; Frontend `video_list.js::renderVideosDynamically` gruppiert das Backendfeld category |
+| Videos | DESC-Sortierung | PASS | `Video.Meta.ordering = ["-created_at", "-pk"]`; `test_category_thumbnail_and_order` |
+| Videos | Thumbnails | PASS | Reale FFmpeg-/PIL-Prüfung, Browserabruf und erneuter JPEG-HTTP-200-Nachweis über Nginx |
+| Videos | HLS | PASS | `FfmpegTests.test_playlists_decode_successfully`, reale RQ-Konvertierung; Fehler-/Pfad-/Playlistprüfungen |
+| Videos | 480p / 720p / 1080p | PASS | `test_real_480p/720p/1080p`, echte Browserwiedergabe aller Qualitäten; neue reale 720p-/360p-Grenzfälle |
+| Videos | Nginx-Medienauslieferung | PASS | Reale Gateway-HTTP-Probe: Thumbnail/CSS 200, geschützte Playlists/TS mit korrekten MIME-Typen; anonyme Requests 401 |
+| Sonstiges | Rechtliche Hinweise | PASS | README: Academy-Kennzeichnung, `LICENSE_ACADEMY.md`, Trennung der Platzhalter-Rechtsseiten und optionaler Veröffentlichung |
+| Sonstiges | Backend-only-Repository | PASS | Getrackte Dateien geprüft: keine Frontend-App, Datenbanken, Uploads, HLS-Artefakte oder geheimen Konfigurationen |
+| Sonstiges | Academy-Docker-Dateien unverändert | NOT APPLICABLE | Keine Originale im verfügbaren offiziellen Git-Baum eec23e0; eigene Dateien stammen aus 80f9314 und sind seit 6e0c377 unverändert. Kein Bytevergleich mit nicht gelieferten Dateien behauptet |
+| Sonstiges | GitHub-Abgabe vorbereitet | PASS | Origin/Ziel/öffentliche Sichtbarkeit lesend geprüft; Tests, README, Attribution, Lizenz und Push-Checkliste vorhanden; kein Push |
+| Externer Befund | Reset-Blurfehler im offiziellen Frontend | PARTIAL | `shared/js/auth.js::validatePW` erwartet confirmed_password; Reset-HTML hat repeated_password. Backend und tatsächlicher Submit-/Login-Flow erfolgreich; Frontend unverändert |
+
+## Quellen, Originaldateien und rechtliche Hinweise
+
+Der offizielle lokale Frontend-Git-Baum bei `eec23e0` enthält keine Docker-
+oder Compose-Dateien. Die eigenen Dateien unter `deploy/` wurden in `80f9314`
+eingeführt. Gegenüber `6e0c377` blieben Dockerfile, Compose und Nginx unverändert.
+Daher existiert keine verfügbare Academy-Docker-Originaldatei für einen Bytevergleich.
+Falls zusätzlich außerhalb dieses Materials Originale verpflichtend bereitgestellt
+wurden, müssen diese vor Einreichung separat zugeordnet werden; keine Ersetzung
+oder Bearbeitung solcher unbekannten Dateien wird behauptet.
+
+Die unveränderte `LICENSE_ACADEMY.md` stammt aus dem offiziellen Checkout;
+SHA-256 identisch mit dessen `LICENSE.md`. Die sechs vorhandenen Stellen
+mit Zeilenende-Leerzeichen wurden für eine bytegetreue Beilage beibehalten;
+die Whitespaceprüfung aller übrigen Änderungen ist sauber. Sie gilt für übernommene oder
+abgeleitete Academy-Bestandteile, nicht automatisch für den eigenen Backendcode.
+Die README enthält die geforderte Academy-Kennzeichnung. Das offizielle Frontend
+bleibt separat und unverändert; dessen Impressum-/Datenschutzseiten enthalten
+Platzhalter. Es wurde kein öffentliches Hosting eingerichtet und keine Domain
+benötigt. Vor einer freiwilligen Veröffentlichung wären diese Angaben separat
+zu prüfen; sie sind kein fehlender Backend-Endpunkt.
 
 ## Nachweise und Git
 
-Lokale, absichtlich ignorierte Artefakte:
+Lokale, ignorierte Nachweise: `test-results/academy-final-tests.txt`,
+`academy-final-coverage.txt`, `academy-quality.txt`, `academy-live-acceptance.txt`,
+`academy-gateway-acceptance.txt`, `academy-restart-before.json`,
+`academy-restart-after.json`, `academy-static-audit.json`,
+`academy-final-runtime.txt`, Browser-JSONs und
+Mail-Previews. Secrets, Datenbanken, Uploads, HLS, Logs und lokale
+Rechnerdiagnosen gehören nicht zum aktuellen Abgabequellbaum.
 
-- `test-results/docker-live-acceptance.txt`: erfolgreicher operativer Live-Test.
-- `test-results/docker-gateway-acceptance.txt`: erfolgreiche echte HTTP-Prüfung.
-- `test-results/gateway_acceptance.py`: ergänzende lokale HTTP-Prüfung.
-- `test-results/docker-final-tests.txt`: vollständige Suite, 122/122 bestanden.
-- `test-results/docker-final-coverage.txt`: 96 % Anwendungscoverage.
-- `test-results/docker-acceptance-quality.txt`: alle Qualitätsprüfungen bestanden.
-- `test-results/browser/`: Browsernachweise mit geschwärzten Tokenpfaden.
-- `.env.acceptance`: ausschließlich lokale, zufällige Abnahme-Zugangsdaten.
+Ausgangscommit `6e0c377` auf `main`; die zusätzlichen Tests sind in `a35e07c`
+lokal committed. Dokumentation und Lizenzbeilage folgen im abschließenden
+Dokumentationscommit. Dessen Hash ist über `git log -1 --oneline` und im
+abschließenden Chatbericht feststellbar; der Bericht enthält bewusst keine
+selbstreferenzielle Commit-ID. Bestehende Commits bleiben vollständig erhalten.
+GitHub-Ziel: `https://github.com/angelo-niessen-93/Videoflix-Backend`, aktuelle
+Sichtbarkeit per GitHub-Metadaten gelesen: public. Remotehistorie mit
+`git fetch origin` gelesen: `origin/main` bei `80f9314`
+ist Vorfahr von `main`. Keine Sichtbarkeit geändert, kein Push und kein Force-Push.
 
-Laufzeitdaten, Maildateien mit Tokenlinks, Secrets, Testprotokolle und Coverage
-bleiben ausgeschlossen. Die sechs Docker-Volumes bleiben zur Inspektion
-bestehen; der Stack läuft am Ende wieder einschließlich Gateway. Keine
-produktiven Daten, kein SMTP-Versand, keine Daten-/Volume-Löschung.
-
-Ausgangspunkt war `main` bei `fd30e03`, Arbeitsbaum sauber. Bei der Abnahme
-wurden weder Anwendungscode noch Tests oder Docker-Konfiguration geändert.
-Die aktualisierten Dokumente werden nach Diff-/Secret-Prüfung lokal committed.
-Bestehende Historie und Remote bleiben erhalten; kein Push.
-
-## Noch offene Abgabepunkte
-
-1. Eventuelle zusätzliche Academy-Template-/Abgaberegeln bestätigen, falls
-   außerhalb der bekannten offiziellen Quelle verbindliche Vorgaben bestehen.
-2. Bekannten offiziellen Reset-Formularfehler berücksichtigen; das Frontend
-   bleibt unverändert. Beide erforderlichen Browserabläufe sind bestanden.
-3. Falls verlangt: SMTP-Zustellung und echtes Gmail-/Outlook-Rendering nach
-   ausdrücklicher Freigabe prüfen. Lokale Worker-Mail ist erfolgreich abgenommen.
-4. Vor öffentlichem Hosting: TLS, Secure Cookies, Proxy-Vertrauen, Backups,
-   Ressourcen-/Uploadlimits und produktive Secrets einrichten und prüfen.
-5. Repository-Sichtbarkeit wegen Academy-Assets passend wählen und den
-   GitHub-Push separat freigeben. Keine offenen Docker-Infrastrukturblocker.
-
-Start-/Abnahmebefehle stehen in `deploy/README.md`, die Abgabecheckliste in
-`GITHUB_SUBMISSION_CHECKLIST.md`. Der lokale HTTP-Abnahmestack ist kein
-Nachweis für einen öffentlich gehärteten Produktionsbetrieb.
+Die exakten verbleibenden Push-Schritte stehen in
+`GITHUB_SUBMISSION_CHECKLIST.md`. Die technische Backendprüfung ist abgeschlossen;
+extern bleiben der beschriebene Frontend-Befund und gegebenenfalls separat
+bereitgestellte Academy-Originale. Anbieter-SMTP und öffentliche Produktion
+sind außerhalb der geforderten lokalen Abnahme.

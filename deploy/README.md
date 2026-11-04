@@ -14,8 +14,8 @@ and Compose v5.6.1 built and started the isolated stack successfully.
 PostgreSQL migrations/persistence, Redis, both independent workers, local
 worker email, FFmpeg/HLS and real Nginx/Gunicorn HTTP delivery passed.
 See [the verification report](../VIDEOFLIX_DOD_REPORT.md) for evidence and
-remaining submission/production limits. The earlier engine failure is kept
-in the [historical Windows diagnosis](WINDOWS_DOCKER_DIAGNOSIS.md).
+remaining submission limits. General Windows troubleshooting is in the
+[diagnostic guide](WINDOWS_DOCKER_DIAGNOSIS.md), without local machine data.
 
 ## Local HTTP startup
 
@@ -94,8 +94,10 @@ server; the explicit HTTP request verifies gateway reachability separately.
 Full browser integration remains the separate Playwright suite in the root
 README. The infrastructure script is outside application coverage; its live
 run passed on 4 November 2026. Five automated tests verify its isolation
-guards and worker failure/timeout behavior. The unchanged full 122-test suite,
-including real browser/FFmpeg checks, also passed with 96% application coverage.
+guards and worker failure/timeout behavior. All previous 122 tests remain;
+the final expanded 129-test suite passed
+without skips, with 97% application coverage. This includes two real frontend
+flows, two email-layout tests, eleven FFmpeg tests and two loopback SMTP tests.
 
 Synthetic records and media stay in the dedicated acceptance volumes for
 inspection; the script does not delete them. Shut down without `-v` afterward.
@@ -110,8 +112,10 @@ Builds, migrations, live PostgreSQL/Redis, separate workers and gateway
 static/media delivery passed the isolated local acceptance.
 Before hosting, configure TLS, Secure cookies, redirect/proxy trust, backups,
 resource/upload limits, secrets and approved SMTP separately. Images use
-version tags; rebuild intentionally for security updates. The Academy must
-confirm any additional submission-specific template requirements.
+version tags; rebuild intentionally for security updates. Public hosting is
+not required for this Academy submission. No Academy
+Docker originals were supplied in the inspected official source tree; the
+existing project-owned configuration was left unchanged during acceptance.
 
 ## Retained acceptance stack
 
@@ -132,3 +136,21 @@ Do not overwrite this retained stack or delete its volumes. The browser test
 suite needs port 8000: temporarily stop the acceptance gateway before running
 it, then start the gateway again afterward. Workers have no Compose healthcheck;
 verify their registrations and completed jobs as part of the live test.
+
+## Verified restart and repeated acceptance
+
+The existing six service containers were restarted without rebuilding images
+or deleting volumes. Database-record and private/public-media/mail checksums
+were identical before and after restart; all 35 migrations remained applied.
+The live script and real gateway HTTP probes then passed again. Restarting
+an isolated acceptance stack is distinct from resetting its database.
+
+To repeat the live script on this retained synthetic environment:
+
+```powershell
+docker compose --env-file .env.acceptance -p videoflix-release-acceptance -f deploy/compose.yaml exec -T web python manage.py shell -c "from scripts.verify_infrastructure import main; main()"
+```
+
+Each run adds synthetic users, mail and media; it does not reset prior data.
+The example fresh-stack commands earlier in this guide must not be used to
+replace credentials of this already populated stack.
