@@ -1,0 +1,17 @@
+**
+!requirements.txt
+!manage.py
+!config/
+!config/**
+!accounts/
+!accounts/**
+!videos/
+!videos/**
+!templates/
+!templates/**
+!scripts/
+!scripts/**
+!deploy/
+!deploy/**
+**/__pycache__/**
+**/*.pyc

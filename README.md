@@ -4,7 +4,9 @@ A separate Django REST API for email registration, account activation,
 JWT cookie authentication, password recovery and protected HLS video streaming.
 The backend implements the supplied contract and has been integrated with the
 unchanged official Academy Vanilla JavaScript frontend in a separate sibling
-directory. No Academy backend Docker files have been supplied.
+directory. No Academy backend Docker files have been supplied. A separate,
+project-owned configuration is prepared in [deploy/](deploy/README.md);
+container runtime verification remains blocked by the local Docker engine.
 See [VIDEOFLIX_DOD_REPORT.md](VIDEOFLIX_DOD_REPORT.md) for verified results and
 remaining infrastructure acceptance work.
 
@@ -74,7 +76,9 @@ All supported variables appear in [.env.example](.env.example).
 | `ACTIVATION_TIMEOUT`, `PASSWORD_RESET_TIMEOUT` | Token validity in seconds; `86400`, `3600` |
 | `COOKIE_SECURE` | Defaults to true outside debug mode |
 | `COOKIE_SAMESITE` | `Lax`; `None` requires Secure and HTTPS |
+| `SECURE_SSL_REDIRECT` | Defaults to true outside debug; explicit local HTTP override only |
 | `EMAIL_BACKEND` | Application default SMTP; example uses local console output |
+| `EMAIL_FILE_PATH` | Private local message directory for the file-based test backend |
 | `EMAIL_HOST`, `EMAIL_PORT` | SMTP server and port; port defaults to `587` |
 | `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP credentials |
 | `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | STARTTLS defaults true; SSL defaults false |
@@ -484,7 +488,7 @@ integration workflows verified.
 | Redis unavailable | Restore service; durable jobs remain recoverable using `retry_jobs` |
 | Manifest works but player cannot fetch segments | Player credentials, segment URL trailing slash, resolution and private storage mount |
 | Production thumbnail 404 | Configure the web server to serve only public `MEDIA_ROOT` at `/media/` |
-| Docker cannot connect | Start/configure the Docker engine; the missing Academy setup still needs supplying |
+| Docker cannot connect | Check Docker/WSL engine health; see the prepared setup and known blockers in `deploy/README.md` |
 
 Application HTTP logs redact activation/reset token paths. Configure equivalent
 redaction or omission in reverse proxy access logs because these links contain
@@ -512,14 +516,15 @@ caches, coverage and test evidence are excluded by `.gitignore`.
 `.env.example` contains placeholders; fixed passwords and signing keys in the
 isolated test configuration are synthetic test fixtures, not account secrets.
 
-No GitHub repository was created and no push was performed. Once you have
-created or selected an authorized, preferably empty GitHub repository, connect
-it using your actual URL:
+An existing `origin` points to
+`https://github.com/angelo-niessen-93/Videoflix-Backend.git`. It was already
+configured at the start of the final release task. No remote was added and no
+push was performed. Inspect it before a later explicitly approved push:
 
 ```bash
-git remote add origin <REPOSITORY_URL>
 git remote -v
 git status
+git log --oneline -5
 git push -u origin main
 ```
 
@@ -527,3 +532,10 @@ The final command is documented for your later use and has not been executed.
 If the remote already contains commits, fetch and inspect its history before
 integrating; do not force-push over existing work. Repository visibility must
 also respect the usage restrictions of the supplied Academy assets.
+
+The release rerun on 4 November 2026 passed **122/122 tests**, with **96%**
+application coverage (775 statements, 28 missed). This includes the unchanged
+117 existing tests, two real browser workflows, nine FFmpeg integration tests
+and five new infrastructure-acceptance safety/failure tests. Live Redis,
+PostgreSQL and independent worker acceptance remain outstanding. See the
+[push checklist](GITHUB_SUBMISSION_CHECKLIST.md) before submission.

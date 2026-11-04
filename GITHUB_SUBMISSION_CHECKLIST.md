@@ -1,0 +1,28 @@
+# GitHub-Abgabecheckliste
+
+Stand: 4. November 2026. Kein Push im Release-Auftrag durchgeführt.
+
+- [x] Backend separat vom unveränderten offiziellen Frontend versioniert.
+- [x] Branch `main`, bestehende drei Import-Commits beibehalten.
+- [x] README, API-Vertrag, requirements, Migrationen und `.env.example` vorhanden.
+- [x] Eigene Docker-Dateien unter `deploy/` eindeutig gekennzeichnet.
+- [x] Alle 122 Tests einschließlich Browser und FFmpeg bestanden; Coverage 96 %.
+- [x] Ruff, Format, 14-Zeilen-Regel, Django, Deployment, Migration und pip geprüft.
+- [x] Laufzeitdaten, Secrets, Coverage und Testprotokolle vom Commit ausgeschlossen.
+- [ ] Docker Engine reparieren/startfähig bereitstellen; keine Systemänderung ohne Freigabe.
+- [ ] Container bauen/starten und den isolierten Live-Abnahmetest ausführen.
+- [ ] PostgreSQL, Redis, beide Worker, Nginx, Thumbnails und Medienvolumes belegen.
+- [ ] Eventuelle zusätzliche Academy-Docker-Vorlage/Abgaberegeln bestätigen.
+- [ ] Den dokumentierten Reset-Formularfehler des offiziellen Frontends berücksichtigen.
+- [ ] Falls verlangt: SMTP und Mailclient-Rendering nach ausdrücklicher Freigabe prüfen.
+- [ ] Sichtbarkeit wegen Academy-Asset-Nutzungsbedingungen passend wählen.
+- [ ] `git status --short`, `git log --oneline` und `git remote -v` prüfen.
+- [ ] Vor Push erneut auf echte Secrets und unerlaubte Laufzeitdateien prüfen.
+- [ ] GitHub-Ziel bestätigen und ausdrückliche Push-Freigabe einholen.
+- [ ] Danach bei Bedarf `git fetch origin` und entfernte Historie prüfen; kein Force-Push.
+- [ ] Erst mit Freigabe: `git push -u origin main`.
+- [ ] Repository-Link, README-Startanleitung und DoD-Bericht für die Abgabe prüfen.
+
+Vorhandenes Ziel: `https://github.com/angelo-niessen-93/Videoflix-Backend.git`.
+Es wurde weder angelegt noch verändert. Offene Infrastrukturpunkte verhindern
+derzeit die uneingeschränkte Aussage „vollständig abgabefertig“.

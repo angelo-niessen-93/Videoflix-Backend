@@ -44,6 +44,7 @@ uploads/
 hls/
 thumbnails/
 staticfiles/
+test-mail/
 *.mp4
 *.m4v
 *.mov
