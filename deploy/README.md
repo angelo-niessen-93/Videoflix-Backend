@@ -9,10 +9,12 @@ whether a separate course rubric requires a particular supplied template
 must be confirmed with the Academy if such a template exists elsewhere.
 No official file has been changed.
 
-**Runtime acceptance is blocked on this Windows host.** Compose configuration
-validation passed on 4 November 2026. An actual `up --build --wait` attempt
-failed at the Docker Engine `_ping` API with HTTP 500, before a successful
-build/start could be established. This setup is prepared, not runtime verified.
+**Runtime acceptance is pending.** Compose configuration validation passed
+on 4 November 2026. The earlier `up --build --wait` attempt failed at the
+Docker Engine `_ping` API with HTTP 500. Before the documentation commit,
+`docker version` successfully returned server version 29.9.2. The engine is
+now reachable; a fresh build and full infrastructure acceptance remain due.
+See the [historical Windows diagnosis](WINDOWS_DOCKER_DIAGNOSIS.md).
 
 ## Local HTTP startup
 

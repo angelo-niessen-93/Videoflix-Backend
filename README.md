@@ -363,21 +363,18 @@ assets. Debug Django routing also exposes only the public media root.
 
 ## Docker setup
 
-There is no supplied Dockerfile, Compose file or Docker configuration in this
-workspace. None has been created or modified. Therefore no project-specific
-Compose service names or launch commands can be documented honestly. Docker
-CLI was present during verification, but Docker Desktop's Linux engine pipe
-was unavailable. Container startup was not verified. WSL reports that WSL 2 cannot start and no
-distributions are installed. Its virtualization diagnostic conflicts with CIM
-reporting firmware virtualization and a hypervisor present; the Windows feature
-states could not be queried without administrator rights. The precise missing
-Windows component cannot be established from this user context.
+The project-owned Dockerfile, Compose configuration and Nginx configuration
+are in `deploy/`. Follow [the Docker setup guide](deploy/README.md) for local
+startup and the dedicated live infrastructure acceptance procedure. These
+files were created for this backend; no Academy-supplied files were replaced.
+Web and both workers share private and public media storage.
 
-When the Academy files are supplied, keep them unchanged and inspect their
-actual service names, environment mapping, PostgreSQL/Redis connectivity,
-shared media mounts, worker commands and FFmpeg installation before starting.
-Any web and video worker services must share private and public media storage.
-Do not treat the local tests as evidence that a missing container setup works.
+The earlier Windows/WSL engine failure is documented in the
+[historical diagnosis](deploy/WINDOWS_DOCKER_DIAGNOSIS.md). Docker Desktop now
+works: `docker version` successfully returned server version 29.9.2 before
+the documentation commit. A fresh container build/start and full live
+PostgreSQL/Redis/worker acceptance remain pending. The recorded local tests
+are separate evidence from that infrastructure acceptance.
 
 ## Running tests and quality checks
 

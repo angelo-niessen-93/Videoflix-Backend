@@ -9,7 +9,7 @@ Stand: 4. November 2026. Kein Push im Release-Auftrag durchgeführt.
 - [x] Alle 122 Tests einschließlich Browser und FFmpeg bestanden; Coverage 96 %.
 - [x] Ruff, Format, 14-Zeilen-Regel, Django, Deployment, Migration und pip geprüft.
 - [x] Laufzeitdaten, Secrets, Coverage und Testprotokolle vom Commit ausgeschlossen.
-- [ ] Docker Engine reparieren/startfähig bereitstellen; keine Systemänderung ohne Freigabe.
+- [x] Docker Engine erreichbar: `docker version` liefert Server-Version 29.9.2; Containerabnahme folgt separat.
 - [ ] Container bauen/starten und den isolierten Live-Abnahmetest ausführen.
 - [ ] PostgreSQL, Redis, beide Worker, Nginx, Thumbnails und Medienvolumes belegen.
 - [ ] Eventuelle zusätzliche Academy-Docker-Vorlage/Abgaberegeln bestätigen.

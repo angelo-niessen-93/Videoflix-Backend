@@ -197,8 +197,20 @@ angelegt oder verändert, kein GitHub-Repository erstellt und nicht gepusht.
 
 ## Was noch zur uneingeschränkten Abgabe fehlt
 
-1. Windows-/WSL-/Docker-Engine durch eine berechtigte Person funktionsfähig
-   bereitstellen. Konkrete Systemänderungen benötigen ausdrückliche Freigabe.
+Historische Diagnose vom 4. November: Docker meldete
+WslVirtualMachinePlatformNotEnabled; die Windows-Komponentenwartung enthielt
+noch ausstehende Neustartaktionen. Die damaligen Befunde und bedingten
+Reparaturschritte stehen in
+[deploy/WINDOWS_DOCKER_DIAGNOSIS.md](deploy/WINDOWS_DOCKER_DIAGNOSIS.md).
+
+Aktualisierung vor dem Dokumentationscommit: Docker Desktop funktioniert
+inzwischen; `docker version` liefert erfolgreich die Server-Version 29.9.2.
+Die oben dokumentierten fehlgeschlagenen Prüfungen bleiben historische
+Nachweise. Die bisherigen BLOCKED/PARTIAL-Bewertungen werden erst nach einer
+neuen vollständigen Infrastrukturabnahme aktualisiert.
+
+1. Docker-Engine erreichbar bestätigt; keine weitere Systemreparatur im
+   Rahmen dieses Commit-Auftrags erforderlich.
 2. Mit funktionierender Engine das eigene Setup bauen/starten und in einem
    frischen Compose-Projekt den dokumentierten Live-Abnahmetest ausführen.
 3. Echte Migrationen, PostgreSQL, Redis-Cache, unabhängige Worker, lokale
