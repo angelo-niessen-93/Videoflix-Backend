@@ -73,6 +73,12 @@ class AuthenticationTests(ApiCase):
         self.assertEqual(self.post("token/refresh").status_code, 401)
         self.assertEqual(self.post("logout").status_code, 401)
 
+    def test_logout_removes_access_to_protected_resources(self):
+        self.assertEqual(self.login().status_code, 200)
+        self.assertEqual(self.client.get("/api/video/").status_code, 200)
+        self.assertEqual(self.post("logout").status_code, 200)
+        self.assertEqual(self.client.get("/api/video/").status_code, 401)
+
     def test_missing_logout_refresh(self):
         self.assertEqual(self.post("logout").status_code, 400)
 

@@ -181,3 +181,34 @@ class FfmpegTests(ApiCase):
         conversion.assert_not_called()
         self.video.refresh_from_db()
         self.assertEqual(self.video.status, "ready")
+
+    def test_real_720p_source_is_not_upscaled(self):
+        video = sized_source_video("1280x720")
+        convert_video(video.pk)
+        video.refresh_from_db()
+        self.assertEqual(video.status, "ready")
+        self.assertEqual(video.resolutions, ["480p", "720p"])
+        self.assertFalse((video_root(video.pk) / "1080p").exists())
+        for resolution in video.resolutions:
+            segment = video_root(video.pk) / resolution / "000.ts"
+            self.assertEqual(
+                probe_video(segment)["height"], int(resolution[:-1])
+            )
+
+    def test_real_360p_source_fails_without_losing_original(self):
+        video = sized_source_video("640x360")
+        with self.assertRaisesMessage(ValueError, "minimum supported height"):
+            convert_video(video.pk)
+        video.refresh_from_db()
+        self.assertEqual(video.status, "failed")
+        self.assertEqual(video.error, "ValueError")
+        self.assertTrue(Path(video.upload.path).is_file())
+        self.assertFalse(video.thumbnail)
+        self.assertEqual(video.resolutions, [])
+
+
+def sized_source_video(dimensions):
+    source = Path(settings.PRIVATE_MEDIA_ROOT) / f"source-{dimensions}.mp4"
+    flags = [value.replace("1920x1080", dimensions) for value in SOURCE_FLAGS]
+    run_process([settings.FFMPEG_BINARY, *flags, str(source)], 60)
+    return source_video(source)
