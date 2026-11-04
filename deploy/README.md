@@ -9,12 +9,13 @@ whether a separate course rubric requires a particular supplied template
 must be confirmed with the Academy if such a template exists elsewhere.
 No official file has been changed.
 
-**Runtime acceptance is pending.** Compose configuration validation passed
-on 4 November 2026. The earlier `up --build --wait` attempt failed at the
-Docker Engine `_ping` API with HTTP 500. Before the documentation commit,
-`docker version` successfully returned server version 29.9.2. The engine is
-now reachable; a fresh build and full infrastructure acceptance remain due.
-See the [historical Windows diagnosis](WINDOWS_DOCKER_DIAGNOSIS.md).
+**Runtime acceptance passed on 4 November 2026.** Docker Engine 29.9.2
+and Compose v5.6.1 built and started the isolated stack successfully.
+PostgreSQL migrations/persistence, Redis, both independent workers, local
+worker email, FFmpeg/HLS and real Nginx/Gunicorn HTTP delivery passed.
+See [the verification report](../VIDEOFLIX_DOD_REPORT.md) for evidence and
+remaining submission/production limits. The earlier engine failure is kept
+in the [historical Windows diagnosis](WINDOWS_DOCKER_DIAGNOSIS.md).
 
 ## Local HTTP startup
 
@@ -91,9 +92,10 @@ fetches authenticated playlists/segments and decodes all three HLS variants.
 The Django test client exercises the real views without starting an extra web
 server; the explicit HTTP request verifies gateway reachability separately.
 Full browser integration remains the separate Playwright suite in the root
-README. The infrastructure script is outside application coverage and has not
-completed against live services on this host. Five automated tests verify its
-isolation guards and worker failure/timeout behavior.
+README. The infrastructure script is outside application coverage; its live
+run passed on 4 November 2026. Five automated tests verify its isolation
+guards and worker failure/timeout behavior. The unchanged full 122-test suite,
+including real browser/FFmpeg checks, also passed with 96% application coverage.
 
 Synthetic records and media stay in the dedicated acceptance volumes for
 inspection; the script does not delete them. Shut down without `-v` afterward.
@@ -104,9 +106,29 @@ this shell before returning to other environments.
 
 ## Remaining production and course acceptance
 
-Successful builds, migrations, live PostgreSQL/Redis, separate workers and
-gateway static/media delivery must all be verified with a working engine.
+Builds, migrations, live PostgreSQL/Redis, separate workers and gateway
+static/media delivery passed the isolated local acceptance.
 Before hosting, configure TLS, Secure cookies, redirect/proxy trust, backups,
 resource/upload limits, secrets and approved SMTP separately. Images use
 version tags; rebuild intentionally for security updates. The Academy must
 confirm any additional submission-specific template requirements.
+
+## Retained acceptance stack
+
+The completed acceptance uses project `videoflix-release-acceptance` and
+private generated credentials in the ignored root file `.env.acceptance`.
+Its six volumes contain only synthetic acceptance data and local test mail.
+The stack remains running for inspection. Reuse these credentials when
+inspecting it; do not generate replacement passwords for its existing DB.
+
+```powershell
+docker compose --env-file .env.acceptance -p videoflix-release-acceptance -f deploy/compose.yaml ps --all
+# Stop the stack when finished; all volumes are retained:
+docker compose --env-file .env.acceptance -p videoflix-release-acceptance -f deploy/compose.yaml stop
+```
+
+For a future fresh acceptance, first inspect existing project resources.
+Do not overwrite this retained stack or delete its volumes. The browser test
+suite needs port 8000: temporarily stop the acceptance gateway before running
+it, then start the gateway again afterward. Workers have no Compose healthcheck;
+verify their registrations and completed jobs as part of the live test.

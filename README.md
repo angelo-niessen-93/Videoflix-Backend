@@ -6,9 +6,9 @@ The backend implements the supplied contract and has been integrated with the
 unchanged official Academy Vanilla JavaScript frontend in a separate sibling
 directory. No Academy backend Docker files have been supplied. A separate,
 project-owned configuration is prepared in [deploy/](deploy/README.md);
-container runtime verification remains blocked by the local Docker engine.
+the isolated Docker infrastructure acceptance passed on 4 November 2026.
 See [VIDEOFLIX_DOD_REPORT.md](VIDEOFLIX_DOD_REPORT.md) for verified results and
-remaining infrastructure acceptance work.
+remaining submission and production preparation.
 
 ## Technology stack and features
 
@@ -369,12 +369,18 @@ startup and the dedicated live infrastructure acceptance procedure. These
 files were created for this backend; no Academy-supplied files were replaced.
 Web and both workers share private and public media storage.
 
-The earlier Windows/WSL engine failure is documented in the
-[historical diagnosis](deploy/WINDOWS_DOCKER_DIAGNOSIS.md). Docker Desktop now
-works: `docker version` successfully returned server version 29.9.2 before
-the documentation commit. A fresh container build/start and full live
-PostgreSQL/Redis/worker acceptance remain pending. The recorded local tests
-are separate evidence from that infrastructure acceptance.
+Docker Engine 29.9.2 and Compose v5.6.1 successfully built and started the
+isolated `videoflix-release-acceptance` stack on 4 November 2026. Live
+PostgreSQL persistence/migrations, Redis cache, independent RQ workers,
+local worker mail, FFmpeg/HLS, Nginx static/media and protected HTTP APIs
+passed. The full 122-test suite then passed again, including both real browser
+flows and nine FFmpeg tests, with 96% application coverage. See the
+[verification report](VIDEOFLIX_DOD_REPORT.md) for detailed evidence.
+
+The retained stack uses private credentials in ignored `.env.acceptance` and
+contains only synthetic data. Inspect it with the commands in the Docker
+guide; preserve its volumes. The earlier Windows/WSL failure remains in the
+[historical diagnosis](deploy/WINDOWS_DOCKER_DIAGNOSIS.md).
 
 ## Running tests and quality checks
 
@@ -411,8 +417,8 @@ python manage.py test tests --settings=config.postgres_test_settings --noinput
 ```
 
 Django creates and destroys only the test database. Do not point these commands
-at production infrastructure. Real Redis queue/worker and SMTP acceptance are
-separate operational checks; they have not been run on this machine.
+at production infrastructure. Real Redis queue/worker acceptance passed
+separately in the isolated Docker stack. SMTP delivery remains untested; acceptance used local file-based mail.
 
 ## Official frontend and real browser integration
 
@@ -533,6 +539,6 @@ also respect the usage restrictions of the supplied Academy assets.
 The release rerun on 4 November 2026 passed **122/122 tests**, with **96%**
 application coverage (775 statements, 28 missed). This includes the unchanged
 117 existing tests, two real browser workflows, nine FFmpeg integration tests
-and five new infrastructure-acceptance safety/failure tests. Live Redis,
-PostgreSQL and independent worker acceptance remain outstanding. See the
-[push checklist](GITHUB_SUBMISSION_CHECKLIST.md) before submission.
+and five infrastructure-acceptance safety/failure tests. Live Redis,
+PostgreSQL, independent workers and Nginx/API acceptance also passed separately.
+See the [push checklist](GITHUB_SUBMISSION_CHECKLIST.md) before submission.

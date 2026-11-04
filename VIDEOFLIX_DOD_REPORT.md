@@ -5,17 +5,17 @@ Prüfdatum: **4. November 2026**, Europe/Berlin.
 ## Ergebnis und Grenzen
 
 **122 Tests gefunden, 122 bestanden, 0 übersprungen, 0 fehlgeschlagen.**
-Alle bisherigen 117 Tests wurden beibehalten. Hinzu kommen fünf Tests der
-Schutzmechanismen und Fehlerbehandlung des neuen Live-Infrastrukturtests.
-Die beiden echten Playwright-Browserabläufe und neun FFmpeg-Integrationstests
-liefen erneut. **Coverage accounts/videos/config: 96 %**, 775 Statements,
-28 nicht ausgeführt. Der zusätzliche operative Infrastrukturtest unter
-scripts/ gehört nicht zu dieser Anwendungsmessung; sein Live-Lauf ist offen.
+Die unveränderte vollständige Suite lief nach der Docker-Abnahme erneut mit
+`VIDEOFLIX_BROWSER_TESTS=1`: 27,191 Sekunden, beide echten Browserabläufe und
+neun FFmpeg-Integrationstests erfolgreich. **Coverage accounts/videos/config:
+96 %**, 775 Statements, 28 nicht ausgeführt. Der operative Live-Test wird
+separat ausgewertet und gehört nicht zu dieser Coverage-Messung.
 
-**32 Anforderungen: 25 PASS, 4 PARTIAL, 0 FAIL, 3 BLOCKED.**
-Die Anwendung ist geprüft und lokal versioniert. Die vollständige
-Docker-/PostgreSQL-/Redis-/Worker-Abnahme bleibt extern blockiert; daher
-keine uneingeschränkte Freigabe als vollständig abgabefertig.
+**32 Anforderungen: 29 PASS, 3 PARTIAL, 0 FAIL, 0 BLOCKED.**
+Die bisher blockierte Docker-/PostgreSQL-/Redis-/Worker-Infrastrukturabnahme
+ist erfolgreich abgeschlossen. Technisch ist der lokale Docker-Stack für
+die GitHub-Abgabe geprüft. SMTP/Mailclient-Rendering, der bekannte offizielle
+Frontendfehler und Produktionshärtung bleiben ausdrücklich offen.
 
 ## Umgesetzt
 
@@ -40,43 +40,62 @@ keine uneingeschränkte Freigabe als vollständig abgabefertig.
 
 ## Tatsächlicher Infrastrukturzustand
 
-Docker CLI 29.9.2, Compose v5.6.1, Context desktop-linux sind installiert.
-Beim ersten Check fehlte die Pipe dockerDesktopLinuxEngine. Der ausdrücklich
-versuchte Containerstart mit `up --build --wait` im eigenen Projekt
-videoflix-release-acceptance endete mit Exitcode 1:
+Docker Engine 29.9.2 (Linux), Compose v5.6.1, Context desktop-linux.
+Vor dem Start waren keine Container oder Volumes vorhanden; die bestehenden
+Standardnetzwerke blieben unverändert. Der Projektname und Port 8000 waren
+frei. Das neue Projekt `videoflix-release-acceptance` verwendet ausschließlich
+die dedizierte Datenbank und Rolle `videoflix_acceptance`, sechs eigene
+projektgebundene Volumes und ein eigenes Netzwerk. Zufällige sichere Secrets
+liegen nur in der ignorierten `.env.acceptance`; keine Werte werden hier
+oder in Git dokumentiert. Ausschließlich synthetische Benutzer und Medien.
 
-```text
-500 Internal Server Error
-.../pipe/dockerDesktopLinuxEngine/_ping
-check if the server supports the requested API version
-```
+`docker compose --env-file .env.acceptance -p videoflix-release-acceptance
+-f deploy/compose.yaml up --build --wait --wait-timeout 180` war erfolgreich.
+Es waren keine Korrekturen an Anwendungscode, Dockerfile oder Compose nötig.
 
-Docker Desktop und Backend-Prozesse waren anschließend vorhanden. Ein
-laufender Prozess ist kein Beleg für eine funktionierende Linux Engine.
-Kein erfolgreicher Image-Build oder Containerstart konnte nachgewiesen werden.
-Die _ping-Meldung beweist weder eine konkrete API-Inkompatibilität noch die
-ursächliche Windows-Komponente; die Ursache bleibt teilweise ungewiss.
+| Dienst | Ergebnis |
+|---|---|
+| PostgreSQL | läuft, healthy; 35 Migrationen angewendet, kein offener Migrationsplan |
+| Redis | läuft, healthy; PONG und echter Cache-Schreib-/Lesezyklus erfolgreich |
+| Django/Gunicorn | läuft, healthy; zwei Gunicorn-Worker, echte HTTP-API erreichbar |
+| RQ Default Worker | eigener Container/Prozess, registriert; Scheduler aktiv, Mailjob erfolgreich |
+| RQ Video Worker | eigener Container/Prozess, registriert; Scheduler aktiv, Videojob erfolgreich |
+| Nginx Gateway | läuft, healthy; ausschließlich 127.0.0.1:8000 veröffentlicht |
+| migrate | erwartungsgemäß Exited (0); Migrationen und 164 Static-Dateien erfolgreich |
 
-WSL meldet weiterhin fehlende Virtualisierung und keine installierten
-Distributionen. WSLService lief, com.docker.service war beim ersten Check
-angehalten; vmcompute und hns wurden nicht gefunden. Die CPU-Abfrage meldete
-VirtualizationFirmwareEnabled=True und
-SecondLevelAddressTranslationExtensions=False. Die widersprüchlichen Angaben
-reichen nicht aus, um BIOS oder Windows-Features als konkrete Ursache
-festzulegen. Get-WindowsOptionalFeature verweigerte die Abfrage mangels
-Administratorrechten; der frühere Feature-Status wurde damit nicht erneut
-bestätigt. Keine Boot-/BIOS-/Feature-Änderungen, Installation, Reparatur,
-Datenlöschung oder automatischer Neustart wurden durchgeführt.
+Worker haben keinen eigenen Compose-Healthcheck; ihre Funktion wurde durch
+Registrierung, Containerlogs und tatsächlich abgeschlossene Jobs geprüft.
 
-PostgreSQL und Redis sind auf 127.0.0.1:5432 beziehungsweise :6379 nicht
-verbunden; aktuelle TCP-Prüfungen liefen in Timeouts. Keine entsprechenden
-Serverprogramme im PATH oder zugehörigen Dienste festgestellt. Das ist kein
-Beweis, dass nirgendwo auf dem Rechner portable Installationen liegen.
-Eine Neuinstallation oder systemweite Dienständerung benötigt Freigabe und
-wurde nicht ausgeführt. Reguläre Django-Einstellungen nutzen PostgreSQL und
-Redis; die erfolgreiche lokale Suite nutzt isoliertes SQLite, LocMemCache,
-fakeredis und Test-Mail. **Keine echte PostgreSQL-/Redis-Laufzeitabnahme und
-kein erfolgreicher unabhängiger RQ-Worker-Lauf wurden behauptet.**
+`scripts.verify_infrastructure.main()` meldet
+`PASS: PostgreSQL, Redis, RQ, email, admin and HLS`. Geprüft wurden echte
+PostgreSQL-ORM-Persistenz, Redis PING/Cache, beide Queue-Worker, asynchrone
+Reset-Mail in das private Datei-Mail-Volume, Admin-Upload eines generierten
+1080p-Videos, asynchrone FFmpeg-Konvertierung, Thumbnail, Dashboard sowie
+480p/720p/1080p. Jede Variante wurde mit FFmpeg vollständig decodiert.
+Separate SQL-Abfragen bestätigten einen persistierten Mailjob `sent` und
+ein Video `ready` nach Abschluss des Abnahmeskriptprozesses.
+
+Die zusätzliche echte HTTP-Prüfung vom Web-Container über Nginx zu Gunicorn
+bestätigte Cookie-Login, API-Liste, CSRF-Endpunkt, Admin-CSS und JPEG-Thumbnail
+mit HTTP 200. Für jede HLS-Auflösung wurden Playlist und MPEG-TS-Segment
+mit Authentifizierung abgerufen: korrekte MIME-Typen, private/no-store für
+Playlists sowie TS-Syncbyte und Paketlänge erfolgreich. Insgesamt drei
+Segmente aus dem kurzen synthetischen Clip wurden geprüft. Anonyme API-,
+Playlist- und Segmentrequests lieferten 401; private Uploadpfade und deren
+unzulässige öffentliche Medienpfade lieferten 404.
+
+Für die unveränderte Browser-Suite wurde ausschließlich der Gateway
+vorübergehend gestoppt, damit deren isolierter Live-Testserver Port 8000
+verwenden konnte. Danach wurde der Gateway wieder gestartet; CSRF-API und
+Admin-CSS wurden zusätzlich vom Windows-Host über 127.0.0.1:8000 mit HTTP 200
+geprüft. Browser-Tests nutzen weiterhin ihre isolierte SQLite-/fakeredis-
+Testumgebung; die echte PostgreSQL-/Redis-/Worker-Prüfung erfolgte separat
+im Docker-Stack. Diese Nachweise werden nicht miteinander gleichgesetzt.
+
+Der historische Windows-/WSL-Fehler ist in
+[deploy/WINDOWS_DOCKER_DIAGNOSIS.md](deploy/WINDOWS_DOCKER_DIAGNOSIS.md)
+festgehalten und blockiert diese Abnahme nicht mehr. Keine Windows-, BIOS-
+oder Docker-Desktop-Einstellungen geändert, keine Volumes gelöscht.
 
 ## Offizielle Docker-Dateien und Frontend
 
@@ -91,9 +110,9 @@ Quelle. Eine eventuell an anderer Stelle vorgeschriebene unveränderliche
 Academy-Vorlage muss separat bestätigt werden. Die eigenen Dateien ersetzen
 keine bereitgestellten Academy-Dateien.
 
-Das offizielle Frontend blieb unverändert und separat unter
-D:/DEVAkademie/Projekte/Videoflix-Frontend. Zwei tatsächliche Browserabläufe
-bestanden erneut: Registrierung, Aktivierung, Login, Dashboard, Thumbnail,
+Das offizielle Frontend blieb unverändert im separaten
+Checkout `../Videoflix-Frontend` (Git-Status vor und nach der Abnahme sauber).
+Zwei tatsächliche Browserabläufe bestanden erneut: Registrierung, Aktivierung, Login, Dashboard, Thumbnail,
 decodierte Wiedergabe in 480p/720p/1080p, zeitgesteuerter Refresh und Logout;
 sowie Reset-Anforderung, Test-Mail-Link, Passwortwechsel und Prüfung von
 altem/neuem Login. Cookies, CORS und CSRF-/Origin-Verhalten werden von Browser-
@@ -122,8 +141,9 @@ SMTP sowie echtes Gmail-/Outlook-Rendering sind weiterhin nicht geprüft.
 | Offizielle Browserabläufe | PASS, beide erneut bestanden |
 | pip check | PASS |
 | docker compose config --quiet | PASS, nur statische Validierung |
-| Tatsächlicher Containerstart | BLOCKED, Engine-_ping HTTP 500 |
-| Live PostgreSQL-/Redis-/Worker-Abnahmetest | BLOCKED, Infrastruktur nicht verfügbar |
+| Tatsächlicher Containerstart | PASS, Build/Start und alle vorhandenen Healthchecks erfolgreich |
+| Live PostgreSQL-/Redis-/Worker-Abnahmetest | PASS, echte Jobs, Mail und FFmpeg/HLS erfolgreich |
+| Nginx/Gunicorn HTTP | PASS, API, CSS, JPEG, alle HLS-Varianten und Zugriffsschutz |
 
 Die finalen Einzelprüfungen und die vollständige Suite verwenden dieselben
 Tests wie zuvor; kein Test wurde entfernt, abgeschwächt oder umgangen.
@@ -140,10 +160,10 @@ separate Playwright-Suite ergänzen ihn; er ersetzt keine Browserabnahme.
 | PEP 8 | PASS | Ruff und Formatprüfung erfolgreich |
 | README | PASS | Englische Einrichtung, offizieller Vertrag, CSRF-Policy, Browsertests und Grenzen dokumentiert |
 | Django REST Framework | PASS | API- und echte Netzwerk-/Browserrequests erfolgreich |
-| PostgreSQL | BLOCKED | Regulär konfiguriert; Port nicht erreichbar, realer Serverlauf ausstehend |
-| Redis | BLOCKED | Konfiguriert und Fehlerfälle getestet; realer Server nicht erreichbar |
-| Django RQ | PARTIAL | Echte Queue-/Task-/SimpleWorker-Tests mit fakeredis; separater realer Worker fehlt |
-| Docker | BLOCKED | Engine-Pipe fehlt; WSL nicht startfähig; kein geliefertes Backend-Setup |
+| PostgreSQL | PASS | Docker-PostgreSQL, 35 Migrationen und persistierte ORM-Daten erfolgreich |
+| Redis | PASS | Docker-Redis PONG, echter Cache-Roundtrip und reale Queues erfolgreich |
+| Django RQ | PASS | Zwei unabhängige Worker mit Schedulern, Mail- und Videojob erfolgreich |
+| Docker | PASS | Eigene Images gebaut, isolierter Stack gestartet, Healthchecks und Live-Abnahme erfolgreich |
 | Registrierung | PASS | Bestehende Tests plus tatsächliches offizielles Browserformular, HTTP 201 |
 | Account-Aktivierung | PASS | Ablauf/Zweck/Wiederholung getestet; offizieller E-Mail-Link im Browser aktiviert |
 | Login | PASS | Tatsächliches Formular, E-Mail-Login und HttpOnly-Cookies geprüft |
@@ -163,66 +183,47 @@ separate Playwright-Suite ergänzen ihn; er ersetzt keine Browserabnahme.
 | Geschützte Segmente | PASS | Traversal-/Dateinamenprüfungen und tatsächlich decodierte Browsersegmente |
 | E-Mail-Versand | PARTIAL | Offizielles Design, MIME/Plaintext, responsive Vorschau und Testzustellung geprüft; SMTP/Mailclients offen |
 | Frontend-Kompatibilität | PARTIAL | Beide geforderten Browserabläufe erfolgreich; bestehender Reset-JavaScript-Fehler bleibt unverändert dokumentiert |
-| API-Tests | PASS | 117 Tests inklusive 17 neuer Vertrags- und 2 echter Browserprüfungen erfolgreich |
+| API-Tests | PASS | Unveränderte vollständige Suite: 122/122; zusätzliche echte Gateway-HTTP-Prüfung erfolgreich |
 | Sicherheit | PARTIAL | CSRF-/Origin-Negativfälle, Cookies, Blacklist, Tokens und private Medien geprüft; Produktion/HTTPS/Proxy offen |
 | Backend-only Repository | PASS | Getrennter Frontend-Checkout; im Backend nur notwendige E-Mail-Logoassets |
-| Docker-Dateien unverändert | PASS | Keine Docker-Dateien erstellt oder verändert |
+| Docker-Dateien unverändert | PASS | Keine Academy-Docker-Dateien vorhanden; eigene bestehende Docker-Konfiguration bei dieser Abnahme unverändert |
 
 ## Nachweise und Git
 
 Lokale, absichtlich ignorierte Artefakte:
 
-- test-results/release-final-tests.txt: letzter vollständiger Testlauf.
-- test-results/release-final-coverage.txt: Anwendungsmessung.
-- test-results/release-container-start.txt: fehlgeschlagener Containerstart.
-- test-results/browser/: aktuelle Request-Nachweise mit geschwärzten Tokenpfaden.
+- `test-results/docker-live-acceptance.txt`: erfolgreicher operativer Live-Test.
+- `test-results/docker-gateway-acceptance.txt`: erfolgreiche echte HTTP-Prüfung.
+- `test-results/gateway_acceptance.py`: ergänzende lokale HTTP-Prüfung.
+- `test-results/docker-final-tests.txt`: vollständige Suite, 122/122 bestanden.
+- `test-results/docker-final-coverage.txt`: 96 % Anwendungscoverage.
+- `test-results/docker-acceptance-quality.txt`: alle Qualitätsprüfungen bestanden.
+- `test-results/browser/`: Browsernachweise mit geschwärzten Tokenpfaden.
+- `.env.acceptance`: ausschließlich lokale, zufällige Abnahme-Zugangsdaten.
 
-Browserprotokolle enthalten keine Cookies, Passwörter oder Tokenwerte.
-.env, virtuelle Umgebungen, Datenbanken, private/öffentliche Laufzeitmedien,
-HLS, Coverage, Testprotokolle und lokale Maildateien sind ausgeschlossen.
-Der Docker-Build verwendet eine Positivliste und nimmt keine .env oder
-Laufzeitdaten mit. Die gespeicherten Maildateien bleiben privat.
-Die Prüfung aller 86 Commit-Kandidatendateien fand keine Zugangsdaten-
-Signaturen oder verbotenen Laufzeitdateien. Ignore-Proben bestätigten den
-Ausschluss privater Dateien und die Aufnahme von .env.example.
+Laufzeitdaten, Maildateien mit Tokenlinks, Secrets, Testprotokolle und Coverage
+bleiben ausgeschlossen. Die sechs Docker-Volumes bleiben zur Inspektion
+bestehen; der Stack läuft am Ende wieder einschließlich Gateway. Keine
+produktiven Daten, kein SMTP-Versand, keine Daten-/Volume-Löschung.
 
-Zu Beginn existierten bereits drei lokale Import-Commits auf main und ein
-origin nach https://github.com/angelo-niessen-93/Videoflix-Backend.git.
-Die Historie wurde weder neu erfunden noch umgeschrieben. Ein zusätzlicher
-Release-Commit fasst die eigene Docker-Vorbereitung, den operativen
-Abnahmetest, dessen fünf Schutztests und die Dokumentation zusammen:
-**ein neuer Commit, vier Commits insgesamt** nach Abschluss dieser Arbeit.
-Der finale Status wird nach dem Commit erneut geprüft. Es wurde kein Remote
-angelegt oder verändert, kein GitHub-Repository erstellt und nicht gepusht.
+Ausgangspunkt war `main` bei `fd30e03`, Arbeitsbaum sauber. Bei der Abnahme
+wurden weder Anwendungscode noch Tests oder Docker-Konfiguration geändert.
+Die aktualisierten Dokumente werden nach Diff-/Secret-Prüfung lokal committed.
+Bestehende Historie und Remote bleiben erhalten; kein Push.
 
-## Was noch zur uneingeschränkten Abgabe fehlt
+## Noch offene Abgabepunkte
 
-Historische Diagnose vom 4. November: Docker meldete
-WslVirtualMachinePlatformNotEnabled; die Windows-Komponentenwartung enthielt
-noch ausstehende Neustartaktionen. Die damaligen Befunde und bedingten
-Reparaturschritte stehen in
-[deploy/WINDOWS_DOCKER_DIAGNOSIS.md](deploy/WINDOWS_DOCKER_DIAGNOSIS.md).
+1. Eventuelle zusätzliche Academy-Template-/Abgaberegeln bestätigen, falls
+   außerhalb der bekannten offiziellen Quelle verbindliche Vorgaben bestehen.
+2. Bekannten offiziellen Reset-Formularfehler berücksichtigen; das Frontend
+   bleibt unverändert. Beide erforderlichen Browserabläufe sind bestanden.
+3. Falls verlangt: SMTP-Zustellung und echtes Gmail-/Outlook-Rendering nach
+   ausdrücklicher Freigabe prüfen. Lokale Worker-Mail ist erfolgreich abgenommen.
+4. Vor öffentlichem Hosting: TLS, Secure Cookies, Proxy-Vertrauen, Backups,
+   Ressourcen-/Uploadlimits und produktive Secrets einrichten und prüfen.
+5. Repository-Sichtbarkeit wegen Academy-Assets passend wählen und den
+   GitHub-Push separat freigeben. Keine offenen Docker-Infrastrukturblocker.
 
-Aktualisierung vor dem Dokumentationscommit: Docker Desktop funktioniert
-inzwischen; `docker version` liefert erfolgreich die Server-Version 29.9.2.
-Die oben dokumentierten fehlgeschlagenen Prüfungen bleiben historische
-Nachweise. Die bisherigen BLOCKED/PARTIAL-Bewertungen werden erst nach einer
-neuen vollständigen Infrastrukturabnahme aktualisiert.
-
-1. Docker-Engine erreichbar bestätigt; keine weitere Systemreparatur im
-   Rahmen dieses Commit-Auftrags erforderlich.
-2. Mit funktionierender Engine das eigene Setup bauen/starten und in einem
-   frischen Compose-Projekt den dokumentierten Live-Abnahmetest ausführen.
-3. Echte Migrationen, PostgreSQL, Redis-Cache, unabhängige Worker, lokale
-   Worker-Mail, Admin-Upload und drei HLS-Varianten zusammen nachweisen;
-   Nginx, Static-Dateien und Thumbnail-HTTP-Auslieferung ebenfalls prüfen.
-4. Zusätzliche Academy-Templatevorgaben klären, falls außerhalb der bekannten
-   offiziellen Quelle andere verbindliche Dateien existieren.
-5. Falls für die Abgabe verlangt: freigegebene SMTP-/Mailclient-Abnahme;
-   vor Hosting zusätzlich TLS, Proxy, Backups und Produktionsbetrieb prüfen.
-6. Den offiziellen Reset-Formularfehler dokumentiert bei der Bewertung
-   berücksichtigen. Anschließend GitHub-Push separat ausdrücklich freigeben.
-
-Die genauen Start-/Testbefehle stehen in deploy/README.md; die Push-Schritte
-in GITHUB_SUBMISSION_CHECKLIST.md. Keine produktiven Daten wurden getestet,
-keine echten E-Mails versandt und keine bestehenden Volumes gelöscht.
+Start-/Abnahmebefehle stehen in `deploy/README.md`, die Abgabecheckliste in
+`GITHUB_SUBMISSION_CHECKLIST.md`. Der lokale HTTP-Abnahmestack ist kein
+Nachweis für einen öffentlich gehärteten Produktionsbetrieb.

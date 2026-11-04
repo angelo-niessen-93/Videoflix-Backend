@@ -6,8 +6,9 @@ Zum Diagnosezeitpunkt konnte die Linux-Engine nicht gestartet werden.
 Aktualisierung vor dem Dokumentationscommit: `docker version` liefert
 inzwischen erfolgreich die Server-Version 29.9.2. Die folgenden Befunde und
 bedingten Reparaturschritte beschreiben den damaligen Zustand. Eine weitere
-Systemreparatur ist daraus aktuell nicht abzuleiten. Die Videoflix-Container-
-und Infrastrukturabnahme steht weiterhin aus.
+Systemreparatur ist daraus aktuell nicht abzuleiten. Die anschließende
+Videoflix-Container- und Infrastrukturabnahme war erfolgreich; siehe
+[aktuellen Prüfbericht](../VIDEOFLIX_DOD_REPORT.md).
 
 ## Befund
 
