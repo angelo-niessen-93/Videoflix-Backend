@@ -1,14 +1,73 @@
 # Videoflix backend
 
-A separate Django REST API for email registration, account activation,
-JWT cookie authentication, password recovery and protected HLS video streaming.
-The backend implements the supplied contract and has been integrated with the
-unchanged official Academy Vanilla JavaScript frontend in a separate sibling
-directory. No Academy backend Docker files have been supplied. A separate,
-project-owned configuration is prepared in [deploy/](deploy/README.md);
-the isolated Docker infrastructure acceptance passed on 4 November 2026.
-See [VIDEOFLIX_DOD_REPORT.md](VIDEOFLIX_DOD_REPORT.md) for verified results and
-the final Academy acceptance and remaining external limitations.
+## Quickstart (Docker)
+
+Voraussetzung: Docker mit laufender Linux-Engine und Docker Compose. Es ist
+keine lokal installierte Python-Version erforderlich. Alle Befehle im Root
+dieses Repositorys ausführen.
+
+1. `.env.template` nach `.env` kopieren (Git Bash/Linux/macOS: `cp .env.template .env`,
+   PowerShell: `Copy-Item .env.template .env`). Eine vorhandene `.env` nicht überschreiben.
+2. In `.env` `SECRET_KEY`, `DB_PASSWORD`, `DJANGO_SUPERUSER_PASSWORD` und
+   `DJANGO_SUPERUSER_EMAIL` setzen. Einen langen zufälligen Secret verwenden.
+   SMTP über `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
+   `EMAIL_USE_TLS`, `EMAIL_USE_SSL` und `DEFAULT_FROM_EMAIL` konfigurieren.
+   Für einen lokalen Start ohne SMTP den auskommentierten Datei-Mailbackend wählen.
+3. Starten:
+
+```bash
+docker compose up --build
+```
+
+Admin: http://127.0.0.1:8000/admin/ — Anmeldung mit der **E-Mail-Adresse** und
+`DJANGO_SUPERUSER_PASSWORD`. Der Superuser wird automatisch angelegt. Bestehende
+Konten und Passwörter werden bei erneutem Start erhalten. Das offizielle Frontend
+unverändert separat auf http://127.0.0.1:5500 starten.
+
+```bash
+docker compose ps
+docker compose logs
+docker compose down
+docker compose up
+```
+
+`down` erhält Datenbank, Redis und Medien. Bei vorhandenen Daten weder `down -v`
+noch Volume-Pruning verwenden. Die zentrale `.env` gilt für Web und beide Worker;
+nach Änderungen Container mit `docker compose up -d` neu erstellen.
+`DB_HOST=db` und `REDIS_HOST=redis` bezeichnen interne Dienste. Keine lokalen
+PostgreSQL-, Redis-, FFmpeg- oder Python-Installationen sind nötig.
+
+Der Standard-Projektname `videoflix-academy` trennt diese Installation vom bisherigen
+Projekt `videoflix`. Ein freier `BACKEND_PORT` ist erforderlich; vorhandene Dienste
+nicht ungeprüft ersetzen. Übernahme alter Daten: [Migrationshinweise](deploy/README.md).
+Die HTTP-Einstellungen sind für den lokalen Akademie-Betrieb; für HTTPS
+`COOKIE_SECURE=True` und `SECURE_SSL_REDIRECT=True` setzen und passende Origins konfigurieren.
+
+Die Docker-Dateien basieren auf der
+[offiziellen Akademie-Vorlage](https://github.com/Developer-Akademie-Backendkurs/material.videoflix-docker-files).
+[Vergleich, notwendige Abweichungen und Prüfbericht](DOCKER_VERIFICATION.md).
+Die früheren Abnahmeberichte dokumentieren den Stand vom 4. November 2026.
+
+Tests ohne lokales Python (isolierte SQLite-Testdatenbank; PostgreSQL wird separat live geprüft):
+
+```bash
+docker compose exec web pip install -r requirements-dev.txt
+docker compose exec web python -m coverage run --source=accounts,videos,config manage.py test tests --settings=config.test_settings --noinput
+docker compose exec web python -m coverage report
+```
+
+Die vier optionalen Browserprüfungen benötigen zusätzliche Browser-Infrastruktur;
+der obige Testlauf meldet deren Skips. Auch alle 129 Tests lassen sich ohne
+lokales Python ausführen. Das offizielle Frontend muss dafür separat vorliegen:
+
+```bash
+docker build -t videoflix-browser-tests -f scripts/browser-tests.Dockerfile .
+docker run --rm --mount type=bind,source=/ABSOLUTER/PFAD/Videoflix-Frontend,target=/Videoflix-Frontend,readonly videoflix-browser-tests
+```
+
+Den absoluten Frontend-Pfad anpassen (Windows etwa `D:/Projekte/Videoflix-Frontend`).
+Dieser separate Testcontainer enthält Chromium und Live Server und benötigt
+keine laufenden Anwendungscontainer oder veröffentlichten Host-Ports.
 
 ## Technology stack and features
 
@@ -29,7 +88,7 @@ serializers validate input, services implement business rules and tasks run
 background work. `scripts/check_code_rules.py` enforces the physical 14-line
 function limit and snake_case, allowing Django's required test method names.
 
-## Requirements and local setup
+## Optional local development (without Docker)
 
 Install Python, PostgreSQL, Redis and FFmpeg including FFprobe. FFmpeg must
 include the `libx264` encoder. PostgreSQL and Redis run as independent services;
@@ -57,7 +116,7 @@ Coverage and fakeredis. Gunicorn is installed on non-Windows systems.
 
 ## Environment variables
 
-All supported variables appear in [.env.example](.env.example).
+Docker uses [.env.template](.env.template) and the official names `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `REDIS_LOCATION`. These take precedence over the legacy names below. [.env.example](.env.example) is retained only for optional host development.
 
 | Variable | Purpose / default |
 |---|---|
@@ -369,25 +428,13 @@ assets. Debug Django routing also exposes only the public media root.
 
 ## Docker setup
 
-The project-owned Dockerfile, Compose configuration and Nginx configuration
-are in `deploy/`. Follow [the Docker setup guide](deploy/README.md) for local
-startup and the dedicated live infrastructure acceptance procedure. These
-files were created for this backend; no Academy-supplied files were replaced.
-Web and both workers share private and public media storage.
-
-Docker Engine 29.9.2 and Compose v5.6.1 successfully built and started the
-isolated `videoflix-release-acceptance` stack on 4 November 2026. Live
-PostgreSQL persistence/migrations, Redis cache, independent RQ workers,
-local worker mail, FFmpeg/HLS, Nginx static/media and protected HTTP APIs
-passed. Controlled service restarts preserved database and media checksums.
-The final 129-test suite passed, including both real browser flows, two email
-rendering tests and eleven FFmpeg tests, with 97% application coverage. See the
-[verification report](VIDEOFLIX_DOD_REPORT.md) for detailed evidence.
-
-The retained stack uses private credentials in ignored `.env.acceptance` and
-contains only synthetic data. Inspect it with the commands in the Docker
-guide; preserve its volumes. General Windows/Docker troubleshooting is in
-[the diagnostic guide](deploy/WINDOWS_DOCKER_DIAGNOSIS.md), without machine data.
+Use the Academy-based `backend.Dockerfile`, `backend.entrypoint.sh`,
+`docker-compose.yml` and `.env.template` in the root. The quickstart above is
+the supported startup workflow. All runtime configuration comes from `.env`.
+The previous `deploy/` implementation has been replaced; existing volumes
+are preserved. See [migration notes](deploy/README.md) before reusing old data,
+and [the current verification report](DOCKER_VERIFICATION.md) for the reference
+comparison, necessary deviations and actually executed checks.
 
 ## Running tests and quality checks
 
@@ -421,12 +468,12 @@ To verify the same suite against PostgreSQL, use a dedicated non-production
 database configuration and a role allowed to create its `test_` database:
 
 ```powershell
-python manage.py test tests --settings=config.postgres_test_settings --noinput
+python manage.py test tests --settings=config.test_settings --noinput
 ```
 
 Django creates and destroys only the test database. Do not point these commands
 at production infrastructure. Real Redis queue/worker acceptance passed
-separately in the isolated Docker stack. SMTP delivery remains untested; acceptance used local file-based mail.
+separately in the isolated Docker stack. Current SMTP and runtime results are recorded in DOCKER_VERIFICATION.md.
 
 ## Official frontend and real browser integration
 

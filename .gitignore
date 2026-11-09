@@ -1,6 +1,7 @@
 # Local environment and credentials
 .env*
 !.env.example
+!.env.template
 .venv/
 venv/
 env/

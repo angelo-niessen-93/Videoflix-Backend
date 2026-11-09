@@ -1,0 +1,81 @@
+# Academy service names and root workflow; see DOCKER_VERIFICATION.md.
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: backend.Dockerfile
+  env_file: .env
+  volumes:
+    - media:/app/media
+    - private_media:/app/private_media
+    - static:/app/staticfiles
+    - test_mail:/app/test-mail
+  init: true
+  restart: unless-stopped
+
+services:
+  db:
+    # Keep the existing major version and layout to protect PostgreSQL data.
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: ${DB_NAME:?Set DB_NAME in .env}
+      POSTGRES_USER: ${DB_USER:?Set DB_USER in .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-bookworm
+    command: [redis-server, --appendonly, "yes"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  web:
+    <<: *backend
+    ports:
+      - "${BACKEND_BIND:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/csrf/', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  worker-default:
+    <<: *backend
+    command: [python, manage.py, rqworker, default, --with-scheduler]
+    depends_on:
+      web:
+        condition: service_healthy
+
+  worker-video:
+    <<: *backend
+    command: [python, manage.py, rqworker, video, --with-scheduler]
+    depends_on:
+      web:
+        condition: service_healthy
+
+# Existing volume keys are preserved; project names isolate installations.
+volumes:
+  database:
+  redis:
+  media:
+  private_media:
+  static:
+  test_mail:

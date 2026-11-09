@@ -1,5 +1,12 @@
 **
 !requirements.txt
+!requirements-dev.txt
+!requirements-browser.txt
+!backend.Dockerfile
+!backend.entrypoint.sh
+!pyproject.toml
+!tests/
+!tests/**
 !manage.py
 !config/
 !config/**

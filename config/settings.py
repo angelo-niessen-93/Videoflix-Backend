@@ -23,9 +23,12 @@ def env_list(name: str, default: str = "") -> list[str]:
     ]
 
 
-SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-DEBUG = env_bool("DJANGO_DEBUG")
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+# Academy names take precedence; aliases keep existing deployments working.
+SECRET_KEY = os.getenv("SECRET_KEY") or os.environ["DJANGO_SECRET_KEY"]
+DEBUG = env_bool("DEBUG", env_bool("DJANGO_DEBUG"))
+ALLOWED_HOSTS = env_list(
+    "ALLOWED_HOSTS", os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+)
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -42,6 +45,7 @@ INSTALLED_APPS = [
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -70,11 +74,13 @@ TEMPLATES = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB", "videoflix"),
-        "USER": os.getenv("POSTGRES_USER", "videoflix"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
-        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "NAME": os.getenv("DB_NAME", os.getenv("POSTGRES_DB", "videoflix")),
+        "USER": os.getenv("DB_USER", os.getenv("POSTGRES_USER", "videoflix")),
+        "PASSWORD": os.getenv(
+            "DB_PASSWORD", os.getenv("POSTGRES_PASSWORD", "")
+        ),
+        "HOST": os.getenv("DB_HOST", os.getenv("POSTGRES_HOST", "localhost")),
+        "PORT": os.getenv("DB_PORT", os.getenv("POSTGRES_PORT", "5432")),
         "CONN_MAX_AGE": 60,
         "OPTIONS": {"connect_timeout": 5},
     }
@@ -107,19 +113,31 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    },
+}
 MEDIA_URL = "/media/"
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
 PRIVATE_MEDIA_ROOT = Path(
     os.getenv("PRIVATE_MEDIA_ROOT", str(BASE_DIR / "private_media"))
 )
-REDIS_URL = os.getenv(
-    "REDIS_URL",
-    "redis://localhost:6379/0?socket_connect_timeout=2&socket_timeout=10",
+REDIS_URL = (
+    "redis://{}:{}/{}?socket_connect_timeout=2&socket_timeout=10".format(
+        os.getenv("REDIS_HOST", "localhost"),
+        os.getenv("REDIS_PORT", "6379"),
+        os.getenv("REDIS_DB", "0"),
+    )
 )
+REDIS_PARTS = ("REDIS_HOST", "REDIS_PORT", "REDIS_DB")
+if not any(name in os.environ for name in REDIS_PARTS):
+    REDIS_URL = os.getenv("REDIS_URL", REDIS_URL)
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
+        "LOCATION": os.getenv("REDIS_LOCATION", REDIS_URL),
         "TIMEOUT": 60,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",

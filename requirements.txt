@@ -7,4 +7,5 @@ django-redis>=6,<7
 psycopg[binary]>=3.2,<4
 Pillow>=12,<13
 python-dotenv>=1.0,<2
+whitenoise>=6.8,<7
 gunicorn>=23,<24; sys_platform != 'win32'
