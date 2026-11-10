@@ -24,12 +24,14 @@ SUCCESS = (
 
 
 def encode_body(data):
+    """Encode JSON or form text as an HTTP request body."""
     return (
         data.encode() if isinstance(data, str) else json.dumps(data).encode()
     )
 
 
 def request(opener, path, data=None, content_type="application/json"):
+    """Issue an HTTP request and retain error responses for assertions."""
     headers = {"Origin": settings.FRONTEND_URL}
     if data is not None:
         headers["Content-Type"] = content_type
@@ -43,6 +45,7 @@ def request(opener, path, data=None, content_type="application/json"):
 
 
 def json_request(opener, path, data, expected=200):
+    """Verify the expected HTTP status and decode the JSON response."""
     status, body, _ = request(opener, path, data)
     require(
         status == expected, f"HTTP {path}: expected {expected}, got {status}"
@@ -51,6 +54,7 @@ def json_request(opener, path, data, expected=200):
 
 
 def verify_admin(opener, user):
+    """Verify staff email login and public admin CSS and JavaScript."""
     status, body, _ = request(opener, "/admin/login/")
     require(status == 200, "Admin login page failed")
     verify_static_assets(opener, body)
@@ -66,6 +70,7 @@ def verify_admin(opener, user):
 
 
 def admin_form(user, csrf):
+    """Encode a staff login form using its session CSRF token."""
     return urlencode(
         {
             "username": user.email,
@@ -77,6 +82,7 @@ def admin_form(user, csrf):
 
 
 def verify_static_assets(opener, page):
+    """Fetch each referenced admin asset and check its content type."""
     assets = re.findall(rb'(?:href|src)="(/static/[^"?]+)', page)
     require(bool(assets), "Admin has no static references")
     for asset in set(assets):
@@ -89,6 +95,7 @@ def verify_static_assets(opener, page):
 
 
 def verify_registration(opener):
+    """Register and activate a disposable account over real HTTP."""
     password = secrets.token_urlsafe(32)
     email = secrets.token_hex(12) + "@example.invalid"
     data = dict(email=email, password=password, confirmed_password=password)
@@ -102,6 +109,7 @@ def verify_registration(opener):
 
 
 def verify_playback(opener):
+    """Verify public thumbnails and authenticated private HLS access."""
     video = Video.objects.filter(status="ready").first()
     require(video is not None, "Run verify_infrastructure.main first")
     for resolution in video.resolutions:
@@ -111,13 +119,13 @@ def verify_playback(opener):
     anonymous = build_opener()
     path = f"/api/video/{video.pk}/480p/index.m3u8"
     require(request(anonymous, path)[0] == 401, "Anonymous HLS was exposed")
-    require(
-        request(anonymous, "/private_media/" + video.upload.name)[0] == 404,
-        "Private original was exposed",
-    )
+    source_path = "/private_media/" + video.upload.name
+    source_status = request(anonymous, source_path)[0]
+    require(source_status == 404, "Private original was exposed")
 
 
 def verify_variant_http(opener, video_id, resolution):
+    """Verify one HLS variant and every HTTP segment reference."""
     base = f"/api/video/{video_id}/{resolution}/"
     status, body, _ = request(opener, base + "index.m3u8")
     require(status == 200 and body.startswith(b"#EXTM3U"), "HTTP HLS failed")
@@ -133,12 +141,14 @@ def verify_variant_http(opener, video_id, resolution):
 
 
 def verify_refresh_logout(opener):
+    """Refresh credentials and confirm logout revokes API access."""
     json_request(opener, "/api/token/refresh/", {})
     json_request(opener, "/api/logout/", {})
     require(request(opener, "/api/video/")[0] == 401, "Logout kept access")
 
 
 def main():
+    """Run the verification command and report its acceptance result."""
     from scripts.verify_infrastructure import verify_isolation
 
     verify_isolation()

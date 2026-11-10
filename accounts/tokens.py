@@ -6,17 +6,20 @@ from django.utils.http import urlsafe_base64_encode
 
 
 def user_state(user) -> str:
+    """Hash account state so password or activation changes revoke links."""
     value = f"{user.pk}:{user.password}:{user.is_active}"
     return salted_hmac("account-state", value).hexdigest()
 
 
 def make_token(user, purpose: str) -> str:
+    """Sign an account-state token scoped to its intended purpose."""
     return signing.dumps(
         {"uid": user.pk, "state": user_state(user)}, salt=purpose
     )
 
 
 def valid_token(user, token: str, purpose: str) -> bool:
+    """Verify token purpose, expiry, identity and current account state."""
     timeout = (
         settings.ACTIVATION_TIMEOUT
         if purpose == "activation"
@@ -32,4 +35,5 @@ def valid_token(user, token: str, purpose: str) -> bool:
 
 
 def encoded_uid(user) -> str:
+    """Encode the account primary key for frontend action URLs."""
     return urlsafe_base64_encode(force_bytes(user.pk))

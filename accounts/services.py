@@ -13,6 +13,7 @@ from .tokens import make_token, valid_token
 
 @transaction.atomic
 def register_user(data: dict) -> tuple:
+    """Create an inactive account atomically and schedule activation."""
     try:
         with transaction.atomic():
             user = User.objects.create_user(
@@ -22,13 +23,13 @@ def register_user(data: dict) -> tuple:
                 is_active=False,
             )
     except IntegrityError as error:
-        raise ValidationError(
-            "Registration could not be completed."
-        ) from error
+        message = "Registration could not be completed."
+        raise ValidationError(message) from error
     return user, schedule_email(user, "activation")
 
 
 def schedule_email(user, purpose: str) -> str:
+    """Persist a token email and enqueue it only after commit."""
     from .tasks import enqueue_email
 
     token = make_token(user, purpose)
@@ -38,6 +39,7 @@ def schedule_email(user, purpose: str) -> str:
 
 
 def locked_user(uid: str):
+    """Decode an account identifier and lock its row for link consumption."""
     try:
         user_id = urlsafe_base64_decode(uid).decode()
         return User.objects.select_for_update().get(pk=int(user_id))
@@ -47,6 +49,7 @@ def locked_user(uid: str):
 
 @transaction.atomic
 def activate_user(uid: str, token: str):
+    """Consume a valid activation link while holding the account lock."""
     user = locked_user(uid)
     if user.is_active or not valid_token(user, token, "activation"):
         raise ValidationError("Invalid or expired link.")
@@ -55,6 +58,7 @@ def activate_user(uid: str, token: str):
 
 
 def request_reset(email: str):
+    """Schedule recovery without disclosing account existence."""
     user = User.objects.filter(email__iexact=email, is_active=True).first()
     if user and user.has_usable_password():
         schedule_email(user, "reset")
@@ -62,6 +66,7 @@ def request_reset(email: str):
 
 @transaction.atomic
 def confirm_password(uid: str, token: str, data: dict):
+    """Consume a valid reset link and save the validated password hash."""
     from .serializers import ConfirmSerializer
 
     user = locked_user(uid)
@@ -74,6 +79,7 @@ def confirm_password(uid: str, token: str, data: dict):
 
 
 def cookie_refresh(request):
+    """Validate the refresh cookie and reject revoked account credentials."""
     raw_token = request.COOKIES.get("refresh_token")
     if not raw_token:
         raise ValidationError("Refresh token is required.")

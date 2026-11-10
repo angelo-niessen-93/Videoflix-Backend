@@ -12,10 +12,12 @@ load_dotenv(BASE_DIR / ".env", override=False)
 
 
 def env_bool(name: str, default: bool = False) -> bool:
+    """Parse common true values from an environment variable."""
     return os.getenv(name, str(default)).lower() in {"true", "1", "yes"}
 
 
 def env_list(name: str, default: str = "") -> list[str]:
+    """Split and trim a comma-separated environment variable."""
     return [
         item.strip()
         for item in os.getenv(name, default).split(",")

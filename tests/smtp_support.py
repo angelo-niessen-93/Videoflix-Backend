@@ -6,11 +6,15 @@ from threading import Thread
 
 
 class SmtpHandler(StreamRequestHandler):
+    """Exercise smtp handler behavior with isolated fixtures."""
+
     def reply(self, value):
+        """Write and flush one SMTP response to the local test client."""
         self.wfile.write(value + b"\r\n")
         self.wfile.flush()
 
     def handle(self):
+        """Accept a local SMTP session and capture messages for assertions."""
         self.connection.settimeout(5)
         self.reply(b"220 localhost test SMTP")
         while line := self.rfile.readline(65536):
@@ -24,6 +28,7 @@ class SmtpHandler(StreamRequestHandler):
                 self.reply(b"250 localhost")
 
     def receive_message(self):
+        """Capture SMTP DATA until the terminating dot line arrives."""
         self.reply(b"354 End with dot")
         lines = []
         while line := self.rfile.readline(65536):
@@ -36,6 +41,7 @@ class SmtpHandler(StreamRequestHandler):
 
 @contextmanager
 def local_smtp_server():
+    """Run a local SMTP capture server and stop it after the test."""
     with ThreadingTCPServer(("127.0.0.1", 0), SmtpHandler) as server:
         server.daemon_threads = True
         server.messages = []

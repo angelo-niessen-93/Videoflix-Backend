@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def enqueue_video(video_id: int):
+    """Queue conversion and retain videos when Redis is unavailable."""
     try:
         job = queue_task("video", convert_video, video_id, 7200, 2)
         Video.objects.filter(pk=video_id).update(job_id=job.id)
@@ -22,6 +23,7 @@ def enqueue_video(video_id: int):
 
 
 def convert_video(video_id: int):
+    """Claim conversion and retain sources when recording failures."""
     video = claim_video(video_id)
     if video is None:
         return

@@ -14,6 +14,7 @@ FRAMEWORK_NAMES = {
 
 
 def check_function(path, node) -> list[str]:
+    """Report physical line-limit and naming violations for one function."""
     errors = []
     size = node.end_lineno - node.lineno + 1
     if size > 14:
@@ -25,16 +26,33 @@ def check_function(path, node) -> list[str]:
 
 
 def check_file(path) -> list[str]:
+    """Inspect Python definitions for project code rule violations."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
-    return [
+    errors = [
         error
         for node in ast.walk(tree)
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         for error in check_function(path, node)
     ]
+    return errors + check_documentation(path, tree)
+
+
+def check_documentation(path, tree):
+    """Require docstrings for definitions outside generated migration files."""
+    if "migrations" in path.parts:
+        return []
+    definitions = (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+    return [
+        f"{path}:{node.lineno}: missing docstring for {node.name}"
+        for node in ast.walk(tree)
+        if isinstance(node, definitions)
+        and node.name != "Meta"
+        and not ast.get_docstring(node)
+    ]
 
 
 def main() -> int:
+    """Run the verification command and report its acceptance result."""
     root = Path(__file__).resolve().parent.parent
     paths = [
         path

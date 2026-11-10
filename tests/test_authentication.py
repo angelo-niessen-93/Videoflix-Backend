@@ -8,7 +8,10 @@ from .helpers import ApiCase, login_cookies
 
 
 class AuthenticationTests(ApiCase):
+    """Exercise authentication behavior with isolated fixtures."""
+
     def test_login_response_and_cookies(self):
+        """Verify login response and cookies."""
         response = self.login()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -22,11 +25,13 @@ class AuthenticationTests(ApiCase):
 
     @override_settings(COOKIE_SECURE=True, COOKIE_SAMESITE="None")
     def test_production_cookie_properties(self):
+        """Verify production cookie properties."""
         response = self.login()
         self.assertTrue(response.cookies["access_token"]["secure"])
         self.assertEqual(response.cookies["access_token"]["samesite"], "None")
 
     def test_invalid_credentials_are_generic(self):
+        """Verify invalid credentials are generic."""
         existing = self.post(
             "login", {"email": self.user.email, "password": "wrong"}
         )
@@ -37,32 +42,39 @@ class AuthenticationTests(ApiCase):
         self.assertEqual(existing.data, missing.data)
 
     def test_email_login_independent_of_admin_username(self):
+        """Verify email login independent of admin username."""
         self.user.username = "admin-created-name"
         self.user.save()
         self.assertEqual(self.login().status_code, 200)
 
     def test_inactive_account(self):
+        """Verify inactive account."""
         self.user.is_active = False
         self.user.save()
         self.assertEqual(self.login().status_code, 400)
 
     def test_protected_endpoint_requires_auth(self):
+        """Verify protected endpoint requires auth."""
         self.assertEqual(self.client.get("/api/video/").status_code, 401)
 
     def test_cookie_authenticated_access(self):
+        """Verify cookie authenticated access."""
         self.login()
         self.assertEqual(self.client.get("/api/video/").status_code, 200)
 
     def test_invalid_access_cookie(self):
+        """Verify invalid access cookie."""
         self.client.cookies["access_token"] = "bad"
         self.assertEqual(self.client.get("/api/video/").status_code, 401)
 
     def test_refresh_cookie_cannot_be_used_as_access(self):
+        """Verify refresh cookie cannot be used as access."""
         refresh = RefreshToken.for_user(self.user)
         self.client.cookies["access_token"] = str(refresh)
         self.assertEqual(self.client.get("/api/video/").status_code, 401)
 
     def test_successful_logout_deletes_cookies_and_blacklists(self):
+        """Verify successful logout deletes cookies and blacklists."""
         refresh = login_cookies(self.client, self.user)
         response = self.post("logout")
         self.assertEqual(response.status_code, 200)
@@ -74,15 +86,18 @@ class AuthenticationTests(ApiCase):
         self.assertEqual(self.post("logout").status_code, 401)
 
     def test_logout_removes_access_to_protected_resources(self):
+        """Verify logout removes access to protected resources."""
         self.assertEqual(self.login().status_code, 200)
         self.assertEqual(self.client.get("/api/video/").status_code, 200)
         self.assertEqual(self.post("logout").status_code, 200)
         self.assertEqual(self.client.get("/api/video/").status_code, 401)
 
     def test_missing_logout_refresh(self):
+        """Verify missing logout refresh."""
         self.assertEqual(self.post("logout").status_code, 400)
 
     def test_valid_refresh_sets_new_access_cookie(self):
+        """Verify valid refresh sets new access cookie."""
         login_cookies(self.client, self.user)
         response = self.post("token/refresh")
         self.assertEqual(response.status_code, 200)
@@ -94,27 +109,32 @@ class AuthenticationTests(ApiCase):
         self.assertEqual(self.client.get("/api/video/").status_code, 200)
 
     def test_refresh_does_not_accept_body_tokens(self):
+        """Verify refresh does not accept body tokens."""
         token = str(RefreshToken.for_user(self.user))
         response = self.post("token/refresh", {"refresh": token})
         self.assertEqual(response.status_code, 400)
 
     def test_invalid_refresh(self):
+        """Verify invalid refresh."""
         self.client.cookies["refresh_token"] = "invalid"
         self.assertEqual(self.post("token/refresh").status_code, 401)
 
     def test_expired_refresh(self):
+        """Verify expired refresh."""
         refresh = RefreshToken.for_user(self.user)
         refresh.set_exp(lifetime=timedelta(seconds=-1))
         self.client.cookies["refresh_token"] = str(refresh)
         self.assertEqual(self.post("token/refresh").status_code, 401)
 
     def test_expired_access(self):
+        """Verify expired access."""
         access = RefreshToken.for_user(self.user).access_token
         access.set_exp(lifetime=timedelta(seconds=-1))
         self.client.cookies["access_token"] = str(access)
         self.assertEqual(self.client.get("/api/video/").status_code, 401)
 
     def test_deactivated_user_cannot_refresh(self):
+        """Verify deactivated user cannot refresh."""
         login_cookies(self.client, self.user)
         self.user.is_active = False
         self.user.save()
@@ -122,26 +142,33 @@ class AuthenticationTests(ApiCase):
 
 
 class CsrfTests(ApiCase):
+    """Exercise csrf behavior with isolated fixtures."""
+
     def setUp(self):
+        """Prepare isolated fixtures and clients for each test."""
         super().setUp()
         self.client = APIClient(enforce_csrf_checks=True)
 
     def test_login_requires_csrf(self):
+        """Verify login requires csrf."""
         self.assertEqual(self.login().status_code, 403)
 
     def test_cookie_endpoints_require_csrf(self):
+        """Verify cookie endpoints require csrf."""
         login_cookies(self.client, self.user)
         for path in ("logout", "token/refresh", "password_reset", "register"):
             with self.subTest(path=path):
                 self.assertEqual(self.post(path).status_code, 403)
 
     def test_csrf_bootstrap_allows_login(self):
+        """Verify csrf bootstrap allows login."""
         response = self.client.get("/api/csrf/")
         self.assertIn("csrftoken", response.cookies)
         self.client.credentials(HTTP_X_CSRFTOKEN=response.data["csrfToken"])
         self.assertEqual(self.login().status_code, 200)
 
     def test_untrusted_origin_rejected(self):
+        """Verify untrusted origin rejected."""
         response = self.client.get("/api/csrf/")
         self.client.credentials(
             HTTP_X_CSRFTOKEN=response.data["csrfToken"],
@@ -150,6 +177,7 @@ class CsrfTests(ApiCase):
         self.assertEqual(self.login().status_code, 403)
 
     def test_frontend_cors_credentials(self):
+        """Verify frontend cors credentials."""
         response = self.client.options(
             "/api/login/",
             HTTP_ORIGIN="http://127.0.0.1:5500",
@@ -162,6 +190,7 @@ class CsrfTests(ApiCase):
 
 
 def assert_cookie_properties(response):
+    """Check cookie properties in the integration result."""
     for name in ("access_token", "refresh_token"):
         cookie = response.cookies[name]
         assert cookie["httponly"]

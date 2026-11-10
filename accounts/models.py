@@ -4,6 +4,8 @@ from django.db.models.functions import Lower
 
 
 class User(AbstractUser):
+    """Store account identities without coupling email login to usernames."""
+
     username = models.CharField(max_length=254, unique=True)
     email = models.EmailField(unique=True)
 
@@ -16,6 +18,8 @@ class User(AbstractUser):
 
 
 class EmailJob(models.Model):
+    """Persist account email delivery state for queue recovery."""
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     purpose = models.CharField(max_length=16)
     token = models.TextField()

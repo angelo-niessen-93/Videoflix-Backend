@@ -4,7 +4,10 @@ from .models import User
 
 
 class EmailBackend(ModelBackend):
+    """Resolve login identifiers as case-insensitive email addresses."""
+
     def authenticate(self, request, username=None, password=None, **kwargs):
+        """Authenticate credentials and apply the configured account policy."""
         email = username or kwargs.get("email", "")
         try:
             user = User.objects.get(email__iexact=email)

@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def enqueue_email(job_id: int):
+    """Enqueue a durable email job and record Redis failures for retry."""
     try:
         job = queue_task("default", send_account_email, job_id, 120, 3)
         EmailJob.objects.filter(pk=job_id).update(job_id=job.id)
@@ -27,6 +28,7 @@ def enqueue_email(job_id: int):
 
 
 def frontend_link(job) -> str:
+    """Build the official frontend URL carrying the account link token."""
     path = (
         settings.ACTIVATION_PATH
         if job.purpose == "activation"
@@ -39,6 +41,7 @@ def frontend_link(job) -> str:
 
 
 def email_context(job) -> dict:
+    """Supply the action link and validity period to email templates."""
     activation = job.purpose == "activation"
     timeout = (
         settings.ACTIVATION_TIMEOUT
@@ -53,6 +56,7 @@ def email_context(job) -> dict:
 
 
 def deliver_email(job):
+    """Send plaintext and HTML account email with its inline logo."""
     context = email_context(job)
     message = build_email(job, context)
     message.attach_alternative(
@@ -63,6 +67,7 @@ def deliver_email(job):
 
 
 def send_account_email(job_id: int):
+    """Run email delivery and persist any raised failure for recovery."""
     try:
         process_email(job_id)
     except Exception as error:
@@ -75,6 +80,7 @@ def send_account_email(job_id: int):
 
 @transaction.atomic
 def process_email(job_id: int):
+    """Lock an email job and deliver it once if its token is still valid."""
     jobs = EmailJob.objects.select_for_update().select_related("user")
     job = jobs.get(pk=job_id)
     if job.status == "sent":
@@ -89,6 +95,7 @@ def process_email(job_id: int):
 
 
 def build_email(job, context):
+    """Construct the subject and plaintext portion of an account email."""
     subject = (
         "Confirm your email"
         if context["activation"]

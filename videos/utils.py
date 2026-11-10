@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def read_playlist(path) -> str:
+    """Cache playlist reads and tolerate Redis outages."""
     key = f"playlist:{path}:{path.stat().st_mtime_ns}"
     try:
         value = cache.get(key)
@@ -20,6 +21,7 @@ def read_playlist(path) -> str:
 
 
 def playlist_response_text(path) -> str:
+    """Add API trailing slashes to HLS segment references."""
     lines = read_playlist(path).splitlines()
     return (
         "\n".join(

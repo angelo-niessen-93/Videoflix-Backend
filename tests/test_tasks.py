@@ -20,11 +20,16 @@ from .test_videos import create_video
 
 
 class PortableWorker(SimpleWorker):
+    """Run RQ jobs with a timeout implementation supported on Windows."""
+
     death_penalty_class = TimerDeathPenalty
 
 
 class TaskTests(ApiCase):
+    """Exercise task behavior with isolated fixtures."""
+
     def test_registration_enqueues_email_after_commit(self):
+        """Verify registration enqueues email after commit."""
         queue = Queue(connection=fakeredis.FakeRedis())
         with patch("config.jobs.django_rq.get_queue", return_value=queue):
             with self.captureOnCommitCallbacks(execute=True):
@@ -35,6 +40,7 @@ class TaskTests(ApiCase):
         )
 
     def test_email_rq_job_executes_with_test_mail_backend(self):
+        """Verify email rq job executes with test mail backend."""
         queue = Queue(connection=fakeredis.FakeRedis())
         schedule_email(self.user, "reset")
         with patch("config.jobs.django_rq.get_queue", return_value=queue):
@@ -45,6 +51,7 @@ class TaskTests(ApiCase):
         self.assertEqual(EmailJob.objects.get().status, "sent")
 
     def test_upload_schedules_conversion_after_commit(self):
+        """Verify upload schedules conversion after commit."""
         queue = Queue("video", connection=fakeredis.FakeRedis())
         upload = SimpleUploadedFile("film.mp4", b"not-real-video")
         with patch("config.jobs.django_rq.get_queue", return_value=queue):
@@ -55,6 +62,7 @@ class TaskTests(ApiCase):
         self.assertEqual(queue.jobs[0].func_name, "videos.tasks.convert_video")
 
     def test_queue_outage_preserves_email_job(self):
+        """Verify queue outage preserves email job."""
         schedule_email(self.user, "reset")
         job = EmailJob.objects.get()
         with patch(
@@ -66,6 +74,7 @@ class TaskTests(ApiCase):
         self.assertEqual(job.error, "ConnectionError")
 
     def test_queue_outage_preserves_video(self):
+        """Verify queue outage preserves video."""
         video = create_video(status="pending")
         with patch(
             "config.jobs.django_rq.get_queue", side_effect=RedisConnectionError
@@ -75,6 +84,7 @@ class TaskTests(ApiCase):
         self.assertEqual(video.status, "failed")
 
     def test_email_failure_is_recorded_and_raised(self):
+        """Verify email failure is recorded and raised."""
         schedule_email(self.user, "reset")
         job = EmailJob.objects.get()
         with patch(
@@ -89,12 +99,14 @@ class TaskTests(ApiCase):
 
     @override_settings(PASSWORD_RESET_TIMEOUT=-1)
     def test_expired_email_not_sent(self):
+        """Verify expired email not sent."""
         schedule_email(self.user, "reset")
         send_account_email(EmailJob.objects.get().pk)
         self.assertEqual(EmailJob.objects.get().status, "expired")
         self.assertEqual(len(mail.outbox), 0)
 
     def test_failed_ffmpeg_job_not_published(self):
+        """Verify failed ffmpeg job not published."""
         video = create_video(status="pending")
         error = subprocess.CalledProcessError(1, ["ffmpeg"])
         with patch("videos.tasks.process_video", side_effect=error):
@@ -105,18 +117,21 @@ class TaskTests(ApiCase):
         self.assertEqual(video.error, "CalledProcessError")
 
     def test_ready_video_is_not_reconverted(self):
+        """Verify ready video is not reconverted."""
         video = create_video()
         with patch("videos.tasks.process_video") as process:
             convert_video(video.pk)
         process.assert_not_called()
 
     def test_processing_video_is_not_claimed_twice(self):
+        """Verify processing video is not claimed twice."""
         video = create_video(status="processing")
         with patch("videos.tasks.process_video") as process:
             convert_video(video.pk)
         process.assert_not_called()
 
     def test_no_upscaling(self):
+        """Verify no upscaling."""
         self.assertEqual(target_resolutions(720), ["480p", "720p"])
         self.assertEqual(target_resolutions(1080), ["480p", "720p", "1080p"])
         self.assertEqual(target_resolutions(480), ["480p"])

@@ -5,6 +5,7 @@ from django.conf import settings
 
 
 def attach_logo(message):
+    """Attach the inline logo referenced by the HTML email."""
     path = Path(settings.BASE_DIR) / "templates/emails/assets/logo.png"
     logo = MIMEImage(path.read_bytes(), _subtype="png")
     logo.add_header("Content-ID", "<videoflix-logo>")

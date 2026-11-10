@@ -7,6 +7,7 @@ from .models import User
 
 
 def check_password_pair(data, first: str, second: str, user) -> dict:
+    """Reject mismatched passwords and apply Django password validators."""
     if data[first] != data[second]:
         raise serializers.ValidationError("Passwords do not match.")
     try:
@@ -17,6 +18,8 @@ def check_password_pair(data, first: str, second: str, user) -> dict:
 
 
 class RegisterSerializer(serializers.Serializer):
+    """Validate registration email and matching strong passwords."""
+
     email = serializers.EmailField(max_length=254)
     password = serializers.CharField(write_only=True, trim_whitespace=False)
     confirmed_password = serializers.CharField(
@@ -24,6 +27,7 @@ class RegisterSerializer(serializers.Serializer):
     )
 
     def validate(self, data):
+        """Normalize the email and validate matching registration passwords."""
         data["email"] = data["email"].lower()
         user = User(email=data["email"], username=data["email"])
         return check_password_pair(
@@ -32,10 +36,13 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
+    """Validate email credentials and return an authenticated user."""
+
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, trim_whitespace=False)
 
     def validate(self, data):
+        """Authenticate the email and reject invalid credentials uniformly."""
         user = authenticate(
             username=data["email"].lower(), password=data["password"]
         )
@@ -45,10 +52,14 @@ class LoginSerializer(serializers.Serializer):
 
 
 class ResetSerializer(serializers.Serializer):
+    """Validate the address supplied for password recovery."""
+
     email = serializers.EmailField()
 
 
 class ConfirmSerializer(serializers.Serializer):
+    """Validate a matching password pair against the target account."""
+
     new_password = serializers.CharField(
         write_only=True, trim_whitespace=False
     )
@@ -57,6 +68,7 @@ class ConfirmSerializer(serializers.Serializer):
     )
 
     def validate(self, data):
+        """Validate recovery passwords against the target account."""
         return check_password_pair(
             data, "new_password", "confirm_password", self.context["user"]
         )

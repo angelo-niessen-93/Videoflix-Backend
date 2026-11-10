@@ -1,23 +1,22 @@
 from pathlib import Path
 
-from django.core.files import File
 from django.db import transaction
-from PIL import Image
 
 from .ffmpeg import (
     complete_variant,
     convert_variant,
-    create_thumbnail,
     probe_video,
     target_resolutions,
     validate_variant,
 )
 from .models import Video
 from .paths import video_root
+from .thumbnails import restore_thumbnail
 
 
 @transaction.atomic
 def claim_video(video_id: int):
+    """Lock and claim a pending or failed video for conversion."""
     video = Video.objects.select_for_update().get(pk=video_id)
     if video.status in (Video.Status.READY, Video.Status.PROCESSING):
         return None
@@ -28,6 +27,7 @@ def claim_video(video_id: int):
 
 
 def build_variants(source: Path, root: Path, resolutions: list[str]):
+    """Reuse verified HLS variants and encode only missing or invalid ones."""
     for resolution in resolutions:
         folder = root / resolution
         height = int(resolution[:-1])
@@ -36,18 +36,19 @@ def build_variants(source: Path, root: Path, resolutions: list[str]):
         validate_variant(folder, height)
 
 
-def publish_video(video, thumbnail: Path, resolutions: list[str]):
-    with Image.open(thumbnail) as image:
-        image.verify()
-    with thumbnail.open("rb") as handle:
-        video.thumbnail.save(f"{video.pk}.jpg", File(handle), save=False)
+@transaction.atomic
+def publish_video(video, resolutions: list[str]):
+    """Publish variants using the latest thumbnail committed by the admin."""
+    video = Video.objects.select_for_update().get(pk=video.pk)
+    restore_thumbnail(video)
     video.resolutions = resolutions
     video.status = Video.Status.READY
     video.error = ""
-    video.save(update_fields=["thumbnail", "resolutions", "status", "error"])
+    video.save(update_fields=["resolutions", "status", "error"])
 
 
 def process_video(video):
+    """Validate the source, build supported HLS variants and publish it."""
     source = Path(video.upload.path)
     metadata = probe_video(source)
     resolutions = target_resolutions(metadata["height"])
@@ -56,6 +57,4 @@ def process_video(video):
     root = video_root(video.pk)
     root.mkdir(parents=True, exist_ok=True)
     build_variants(source, root, resolutions)
-    thumbnail = root / "thumbnail.jpg"
-    create_thumbnail(source, thumbnail)
-    publish_video(video, thumbnail, resolutions)
+    publish_video(video, resolutions)

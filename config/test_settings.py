@@ -24,3 +24,9 @@ ALLOWED_HOSTS = ["testserver", "localhost"]
 REST_FRAMEWORK = {**REST_FRAMEWORK, "DEFAULT_THROTTLE_CLASSES": []}  # noqa: F405
 
 TEST_RUNNER = "config.test_runner.IsolatedRunner"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+    },
+}

@@ -9,14 +9,17 @@ SEGMENT_PATTERN = re.compile(r"[0-9]{3,8}\.ts\Z")
 
 
 def video_root(video_id: int) -> Path:
+    """Locate the private working directory belonging to one video."""
     return Path(settings.PRIVATE_MEDIA_ROOT) / "videos" / str(video_id)
 
 
 def safe_segment(name: str) -> bool:
+    """Accept only numbered MPEG-TS segment basenames."""
     return SEGMENT_PATTERN.fullmatch(name) is not None
 
 
 def protected_file(video, resolution: str, filename: str) -> Path:
+    """Resolve an existing authorized variant file within private storage."""
     if resolution not in RESOLUTIONS or resolution not in video.resolutions:
         raise Http404
     if filename != "index.m3u8" and not safe_segment(filename):

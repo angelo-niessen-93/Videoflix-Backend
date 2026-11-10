@@ -17,7 +17,10 @@ from .test_videos import create_video
 
 
 class RecoveryTests(ApiCase):
+    """Exercise recovery behavior with isolated fixtures."""
+
     def test_retry_pending_and_failed_durable_jobs(self):
+        """Verify retry pending and failed durable jobs."""
         create_video(status="failed")
         schedule_email(self.user, "reset")
         with patch.object(retry_jobs, "enqueue_video") as queued_video:
@@ -27,10 +30,12 @@ class RecoveryTests(ApiCase):
         self.assertEqual(queued_email.call_count, 1)
 
     def test_recover_requires_explicit_video(self):
+        """Verify recover requires explicit video."""
         with self.assertRaises(CommandError):
             call_command("retry_jobs", recover_stopped=True)
 
     def test_recovery_of_stopped_processing_job(self):
+        """Verify recovery of stopped processing job."""
         video = create_video(status="processing")
         with patch(
             "accounts.management.commands.retry_jobs.enqueue_video"
@@ -41,6 +46,7 @@ class RecoveryTests(ApiCase):
         job.assert_called_once_with(video.pk)
 
     def test_successful_jobs_not_retried(self):
+        """Verify successful jobs not retried."""
         create_video(status="ready")
         schedule_email(self.user, "reset")
         EmailJob.objects.update(status="sent")
@@ -52,7 +58,10 @@ class RecoveryTests(ApiCase):
 
 
 class InfrastructureFailureTests(ApiCase):
+    """Exercise infrastructure failure behavior with isolated fixtures."""
+
     def test_throttle_redis_failure_is_logged(self):
+        """Verify throttle redis failure is logged."""
         request = RequestFactory().get("/api/login/")
         request.user = type("Anonymous", (), {"is_authenticated": False})()
         throttle = ResilientAnonThrottle()
@@ -63,11 +72,13 @@ class InfrastructureFailureTests(ApiCase):
                 self.assertTrue(throttle.allow_request(request, None))
 
     def test_throttle_normal_request(self):
+        """Verify throttle normal request."""
         request = RequestFactory().get("/api/login/")
         request.user = type("Anonymous", (), {"is_authenticated": False})()
         self.assertTrue(ResilientAnonThrottle().allow_request(request, None))
 
     def test_token_paths_redacted_from_logs(self):
+        """Verify token paths redacted from logs."""
         record = logging.LogRecord(
             "django.request",
             logging.WARNING,

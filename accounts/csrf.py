@@ -5,6 +5,7 @@ from rest_framework.authentication import SessionAuthentication
 
 
 def trusted_json_request(request) -> bool:
+    """Check the exact trusted origin policy for tokenless JSON requests."""
     origin = request.headers.get("Origin")
     return (
         bool(origin)
@@ -18,6 +19,7 @@ def trusted_json_request(request) -> bool:
 
 
 def enforce_request_csrf(request):
+    """Require Django CSRF validation outside the trusted JSON policy."""
     if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
         if trusted_json_request(request):
             return

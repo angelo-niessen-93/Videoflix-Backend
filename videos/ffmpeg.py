@@ -54,6 +54,7 @@ THUMBNAIL_FLAGS = ["-frames:v", "1", "-vf", "scale=640:-2"]
 
 
 def ffmpeg_input(source: Path) -> list[str]:
+    """Build bounded FFmpeg input arguments for a local source file."""
     return [
         settings.FFMPEG_BINARY,
         "-hide_banner",
@@ -69,6 +70,7 @@ def ffmpeg_input(source: Path) -> list[str]:
 
 
 def run_process(arguments: list[str], timeout: int):
+    """Run a media command with a timeout and captured diagnostic output."""
     return subprocess.run(
         arguments,
         check=True,
@@ -81,6 +83,7 @@ def run_process(arguments: list[str], timeout: int):
 
 
 def probe_video(source: Path) -> dict:
+    """Read and validate the first video stream using FFprobe."""
     arguments = [settings.FFPROBE_BINARY, *PROBE_FLAGS, str(source)]
     output = run_process(arguments, 30)
     metadata = json.loads(output.stdout)
@@ -91,10 +94,12 @@ def probe_video(source: Path) -> dict:
 
 
 def target_resolutions(height: int) -> list[str]:
+    """Select supported HLS heights without upscaling the source."""
     return [name for name in RESOLUTIONS if int(name[:-1]) <= height]
 
 
 def encoding_arguments(height: int) -> list[str]:
+    """Build H.264 and AAC encoding arguments for one target height."""
     return [
         *ENCODING_FLAGS,
         "-vf",
@@ -105,6 +110,7 @@ def encoding_arguments(height: int) -> list[str]:
 
 
 def convert_variant(source: Path, folder: Path, height: int):
+    """Encode a complete private HLS variant at the requested height."""
     folder.mkdir(parents=True, exist_ok=True)
     arguments = ffmpeg_input(source) + encoding_arguments(height)
     arguments += HLS_FLAGS + [
@@ -116,11 +122,13 @@ def convert_variant(source: Path, folder: Path, height: int):
 
 
 def create_thumbnail(source: Path, destination: Path):
+    """Extract a scaled JPEG frame without converting HLS variants."""
     arguments = ffmpeg_input(source) + THUMBNAIL_FLAGS
     run_process([*arguments, str(destination)], 60)
 
 
 def playlist_segments(folder: Path) -> list[str]:
+    """Validate a complete playlist and its safe existing segment files."""
     text = (folder / "index.m3u8").read_text(encoding="utf-8")
     if not text.startswith("#EXTM3U") or "#EXT-X-ENDLIST" not in text:
         raise ValueError("Incomplete playlist")
@@ -131,12 +139,12 @@ def playlist_segments(folder: Path) -> list[str]:
     ]
     if not segments or any(not safe_segment(name) for name in segments):
         raise ValueError("Unsafe or empty playlist")
-    if any(not (folder / name).is_file() for name in segments):
-        raise ValueError("Missing HLS segment")
+    validate_segment_files(folder, segments)
     return segments
 
 
 def validate_variant(folder: Path, height: int):
+    """Verify each HLS segment uses the requested height and H.264 codec."""
     for name in playlist_segments(folder):
         segment = folder / name
         metadata = probe_video(segment)
@@ -144,7 +152,14 @@ def validate_variant(folder: Path, height: int):
             raise ValueError("Unexpected HLS encoding")
 
 
+def validate_segment_files(folder, segments):
+    """Reject playlists referencing segment files that do not exist."""
+    if any(not (folder / name).is_file() for name in segments):
+        raise ValueError("Missing HLS segment")
+
+
 def complete_variant(folder: Path, height: int) -> bool:
+    """Return whether an existing HLS variant can safely be reused."""
     try:
         validate_variant(folder, height)
         return True

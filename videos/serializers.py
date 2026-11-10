@@ -4,6 +4,8 @@ from .models import Video
 
 
 class VideoSerializer(serializers.ModelSerializer):
+    """Expose dashboard metadata and a public thumbnail URL."""
+
     thumbnail_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -18,6 +20,7 @@ class VideoSerializer(serializers.ModelSerializer):
         ]
 
     def get_thumbnail_url(self, instance) -> str:
+        """Build an absolute public thumbnail URL for the client."""
         return self.context["request"].build_absolute_uri(
             instance.thumbnail.url
         )

@@ -13,6 +13,7 @@ from tests.smtp_support import SmtpHandler
 
 
 def verify_isolation():
+    """Reject acceptance runs outside the disposable database setup."""
     require(
         connection.settings_dict["NAME"].endswith("_acceptance"),
         "Disposable acceptance database required",
@@ -21,6 +22,7 @@ def verify_isolation():
 
 
 def verify_smtp_config():
+    """Require the explicitly configured loopback SMTP capture sink."""
     expected = {
         "EMAIL_HOST": "web",
         "EMAIL_PORT": 1025,
@@ -35,6 +37,7 @@ def verify_smtp_config():
 
 
 def send_and_verify(server):
+    """Send a synthetic email and confirm local SMTP delivery."""
     user = User.objects.filter(is_active=True, is_superuser=False).first()
     require(user is not None, "Run HTTP registration acceptance first")
     schedule_email(user, "reset")
@@ -46,6 +49,7 @@ def send_and_verify(server):
 
 
 def main():
+    """Run the verification command and report its acceptance result."""
     verify_isolation()
     with ThreadingTCPServer(("0.0.0.0", 1025), SmtpHandler) as server:
         server.daemon_threads = True

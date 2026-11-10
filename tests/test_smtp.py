@@ -14,7 +14,10 @@ from .smtp_support import local_smtp_server
 
 
 class SmtpDeliveryTests(ApiCase):
+    """Exercise smtp delivery behavior with isolated fixtures."""
+
     def deliver_to_sink(self, purpose):
+        """Send an account email to the loopback SMTP capture server."""
         with local_smtp_server() as server:
             with override_settings(**smtp_settings(server.server_address[1])):
                 schedule_email(self.user, purpose)
@@ -28,6 +31,7 @@ class SmtpDeliveryTests(ApiCase):
         return message
 
     def assert_message_parts(self, message, page):
+        """Check message parts in the integration result."""
         text = message.get_body(preferencelist=("plain",)).get_content()
         html = message.get_body(preferencelist=("html",)).get_content()
         self.assertIn(page + "?uid=", text)
@@ -36,6 +40,7 @@ class SmtpDeliveryTests(ApiCase):
         self.assert_inline_logo(message)
 
     def assert_inline_logo(self, message):
+        """Check inline logo in the integration result."""
         images = [
             part
             for part in message.walk()
@@ -48,6 +53,7 @@ class SmtpDeliveryTests(ApiCase):
         )
 
     def test_activation_delivered_over_local_smtp(self):
+        """Verify activation delivered over local smtp."""
         self.user.is_active = False
         self.user.save(update_fields=["is_active"])
         message = self.deliver_to_sink("activation")
@@ -55,12 +61,14 @@ class SmtpDeliveryTests(ApiCase):
         self.assert_message_parts(message, "/pages/auth/activate.html")
 
     def test_reset_delivered_over_local_smtp(self):
+        """Verify reset delivered over local smtp."""
         message = self.deliver_to_sink("reset")
         self.assertEqual(message["Subject"], "Reset your Password")
         self.assert_message_parts(message, "/pages/auth/confirm_password.html")
 
 
 def smtp_settings(port):
+    """Configure isolated plaintext delivery to the local SMTP sink."""
     return {
         "EMAIL_BACKEND": "django.core.mail.backends.smtp.EmailBackend",
         "EMAIL_HOST": "127.0.0.1",
