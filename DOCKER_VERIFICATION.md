@@ -1,3 +1,17 @@
+# Mentor follow-up: 10 November 2026
+
+A separate stack `videoflix-mentor-20261110` passed Compose validation, image
+builds, healthy startup, real PostgreSQL/Redis and independent RQ acceptance,
+custom-thumbnail byte preservation, concurrent admin/worker row locking, real
+HTTP admin/static assets/API/HLS and account/media persistence across container
+recreation. The existing `videoflix` project was not reconfigured. The temporary
+stack was stopped with `down`; its volumes were retained. See the
+[current DoD report](VIDEOFLIX_DOD_REPORT.md) for commands and evidence.
+
+The sections below document the earlier Docker setup review.
+
+---
+
 # Docker-Korrektur und Abnahme – 9. November 2026
 
 Die Bereitstellung verwendet jetzt die Akademie-Dateinamen im Repository-Root,

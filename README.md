@@ -2,27 +2,26 @@
 
 ## Quickstart (Docker)
 
-Voraussetzung: Docker mit laufender Linux-Engine und Docker Compose. Es ist
-keine lokal installierte Python-Version erforderlich. Alle Befehle im Root
-dieses Repositorys ausführen.
+Requires Docker with a running Linux engine and Docker Compose. Run commands
+from this repository root. Local Python, PostgreSQL, Redis and FFmpeg are not
+required: the backend image includes Python, FFmpeg and FFprobe.
 
-1. `.env.template` nach `.env` kopieren (Git Bash/Linux/macOS: `cp .env.template .env`,
-   PowerShell: `Copy-Item .env.template .env`). Eine vorhandene `.env` nicht überschreiben.
-2. In `.env` `SECRET_KEY`, `DB_PASSWORD`, `DJANGO_SUPERUSER_PASSWORD` und
-   `DJANGO_SUPERUSER_EMAIL` setzen. Einen langen zufälligen Secret verwenden.
-   SMTP über `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
-   `EMAIL_USE_TLS`, `EMAIL_USE_SSL` und `DEFAULT_FROM_EMAIL` konfigurieren.
-   Für einen lokalen Start ohne SMTP den auskommentierten Datei-Mailbackend wählen.
-3. Starten:
+1. Copy `.env.template` to `.env`: `cp .env.template .env` in Bash or
+   `Copy-Item .env.template .env` in PowerShell. Preserve any existing `.env`.
+2. Replace `SECRET_KEY`, `DB_PASSWORD`, `DJANGO_SUPERUSER_PASSWORD` and
+   `DJANGO_SUPERUSER_EMAIL`. Generate a long random secret. Configure SMTP with
+   the documented `EMAIL_*` variables, or select the commented file-based email
+   backend for a local start without an SMTP server.
+3. Start the database, Redis, web application and both independent RQ workers:
 
 ```bash
 docker compose up --build
 ```
 
-Admin: http://127.0.0.1:8000/admin/ — Anmeldung mit der **E-Mail-Adresse** und
-`DJANGO_SUPERUSER_PASSWORD`. Der Superuser wird automatisch angelegt. Bestehende
-Konten und Passwörter werden bei erneutem Start erhalten. Das offizielle Frontend
-unverändert separat auf http://127.0.0.1:5500 starten.
+Open http://127.0.0.1:8000/admin/ and enter the **Email address** and configured
+superuser password. Startup creates the superuser only if missing; existing
+accounts and passwords are retained. Run the unchanged official frontend
+separately at http://127.0.0.1:5500.
 
 ```bash
 docker compose ps
@@ -31,24 +30,25 @@ docker compose down
 docker compose up
 ```
 
-`down` erhält Datenbank, Redis und Medien. Bei vorhandenen Daten weder `down -v`
-noch Volume-Pruning verwenden. Die zentrale `.env` gilt für Web und beide Worker;
-nach Änderungen Container mit `docker compose up -d` neu erstellen.
-`DB_HOST=db` und `REDIS_HOST=redis` bezeichnen interne Dienste. Keine lokalen
-PostgreSQL-, Redis-, FFmpeg- oder Python-Installationen sind nötig.
+`down` retains persistent database, Redis and media volumes. Do not use
+`down -v` or volume pruning when preserving existing data. Web and both workers
+share `.env`; recreate containers with `docker compose up -d` after editing it.
+`DB_HOST=db` and `REDIS_HOST=redis` refer to internal Compose services.
+`worker-default` handles email; `worker-video` handles video conversion.
 
-Der Standard-Projektname `videoflix-academy` trennt diese Installation vom bisherigen
-Projekt `videoflix`. Ein freier `BACKEND_PORT` ist erforderlich; vorhandene Dienste
-nicht ungeprüft ersetzen. Übernahme alter Daten: [Migrationshinweise](deploy/README.md).
-Die HTTP-Einstellungen sind für den lokalen Akademie-Betrieb; für HTTPS
-`COOKIE_SECURE=True` und `SECURE_SSL_REDIRECT=True` setzen und passende Origins konfigurieren.
+The stable project name `videoflix-academy` isolates this installation from the
+older `videoflix` project. Choose an unused `BACKEND_PORT`. See the
+[data migration notes](deploy/README.md) before adopting existing volumes.
+Local HTTP settings are intended for Academy development; enable secure cookies,
+HTTPS redirection and appropriate origins for a separate HTTPS deployment.
 
-Die Docker-Dateien basieren auf der
-[offiziellen Akademie-Vorlage](https://github.com/Developer-Akademie-Backendkurs/material.videoflix-docker-files).
-[Vergleich, notwendige Abweichungen und Prüfbericht](DOCKER_VERIFICATION.md).
-Die früheren Abnahmeberichte dokumentieren den Stand vom 4. November 2026.
+Docker files follow the
+[Academy template](https://github.com/Developer-Akademie-Backendkurs/material.videoflix-docker-files).
+See [Docker verification](DOCKER_VERIFICATION.md) for the template comparison.
+Reports dated 4 November 2026 describe earlier acceptance runs; the current
+mentor-fix results are recorded in [the DoD report](VIDEOFLIX_DOD_REPORT.md).
 
-Tests ohne lokales Python (isolierte SQLite-Testdatenbank; PostgreSQL wird separat live geprüft):
+Run isolated tests inside a running web container:
 
 ```bash
 docker compose exec web pip install -r requirements-dev.txt
@@ -56,18 +56,60 @@ docker compose exec web python -m coverage run --source=accounts,videos,config m
 docker compose exec web python -m coverage report
 ```
 
-Die vier optionalen Browserprüfungen benötigen zusätzliche Browser-Infrastruktur;
-der obige Testlauf meldet deren Skips. Auch alle 129 Tests lassen sich ohne
-lokales Python ausführen. Das offizielle Frontend muss dafür separat vorliegen:
+The browser tests require the optional browser infrastructure and are skipped
+unless enabled. A separate browser test image contains Chromium and Live Server:
 
 ```bash
 docker build -t videoflix-browser-tests -f scripts/browser-tests.Dockerfile .
-docker run --rm --mount type=bind,source=/ABSOLUTER/PFAD/Videoflix-Frontend,target=/Videoflix-Frontend,readonly videoflix-browser-tests
+docker run --rm --mount type=bind,source=/ABSOLUTE/PATH/Videoflix-Frontend,target=/Videoflix-Frontend,readonly videoflix-browser-tests
 ```
 
-Den absoluten Frontend-Pfad anpassen (Windows etwa `D:/Projekte/Videoflix-Frontend`).
-Dieser separate Testcontainer enthält Chromium und Live Server und benötigt
-keine laufenden Anwendungscontainer oder veröffentlichten Host-Ports.
+Replace the frontend path with its absolute location, for example
+`D:/Projekte/Videoflix-Frontend` on Windows. This isolated test container does
+not require running application containers or published host ports.
+
+## Environment templates
+
+Both tracked templates have distinct purposes:
+
+- `.env.template` is the Docker quickstart configuration. It uses internal
+  service names, container media paths and optional initial superuser variables.
+- `.env.example` is used by the optional native development instructions below.
+  It uses loopback PostgreSQL/Redis, host media paths and console email delivery.
+
+Neither file contains live credentials. Copy the appropriate template to the
+single local `.env`, supply private values, and keep `.env` untracked. Legacy
+variable aliases remain supported so existing installations keep working.
+
+## Admin and thumbnail behavior
+
+Admin headings use Videoflix branding; video fields show **Video title**,
+**Original video**, **Thumbnail image**, **Processing status**, **Available HLS
+resolutions**, **Processing error**, **RQ job ID** and **RQ job status**. Queue
+outages are shown as unavailable without changing the video's processing state.
+The user list shows email first while keeping existing internal usernames.
+
+Uploaded thumbnails are validated by Django's image field. A custom image is
+preserved when the worker publishes a video. Without an upload, FFmpeg extracts
+a frame; a private cached copy supports later recovery. Replacing or clearing a
+thumbnail never reconverts HLS or deletes the original. Replaced public images
+are retired after the database transaction commits, unless still referenced.
+
+Clearing an image restores the cached source frame or generates a new one.
+If extraction fails, a neutral JPEG keeps the video visible and the failure is
+logged. Clear the fallback again after repairing the source or FFmpeg to retry.
+If a referenced public thumbnail is deleted outside Django, its next HTTP request
+repairs it and redirects to a fresh image URL. Custom image bytes cannot be
+recovered after external deletion; a generated frame is used instead. Requests
+for unknown image names still return 404. An external static media server must
+forward missing `/media/thumbnails/` requests to Django for this repair behavior.
+
+Admin writes and worker publication lock the same PostgreSQL row and refresh
+worker-owned state before saving. New public filenames avoid browser cache
+collisions. The label-only migration updates model metadata without modifying
+user credentials or video content. Run normal migrations when deploying; the
+Docker entrypoint already does this. No broad project restructuring was needed;
+thumbnail recovery lives in one focused module shared by admin, worker and HTTP.
 
 ## Technology stack and features
 
@@ -86,7 +128,8 @@ The project contains `accounts/`, `videos/`, `config/`, email templates,
 migrations and a logically separated `tests/` suite. Views handle HTTP,
 serializers validate input, services implement business rules and tasks run
 background work. `scripts/check_code_rules.py` enforces the physical 14-line
-function limit and snake_case, allowing Django's required test method names.
+function limit, snake_case and definition docstrings (excluding generated
+migrations and declarative `Meta` classes), allowing Django's required test names.
 
 ## Optional local development (without Docker)
 
@@ -408,12 +451,13 @@ private_media/
     1080p/000.ts
     thumbnail.jpg
 media/
-  thumbnails/<video-id>.jpg
+  thumbnails/<video-id>-<unique-id>.jpg
 ```
 
 Available files depend on source height. Every variant is checked for a finished
 playlist, safe local segment references, existing segments and expected H.264
-dimensions. The generated thumbnail is verified before publishing. Only ready
+dimensions. Custom thumbnails are preserved; generated frames are verified
+before publishing, with a neutral fallback on extraction failure. Only ready
 videos with a thumbnail and resolution metadata appear in the unpaginated list.
 Its fields are `id`, `created_at`, `title`, `description`, `thumbnail_url` and
 `category`. The frontend performs genre grouping and hero selection.
@@ -468,7 +512,7 @@ To verify the same suite against PostgreSQL, use a dedicated non-production
 database configuration and a role allowed to create its `test_` database:
 
 ```powershell
-python manage.py test tests --settings=config.test_settings --noinput
+python manage.py test tests --settings=config.postgres_test_settings --noinput
 ```
 
 Django creates and destroys only the test database. Do not point these commands
@@ -544,7 +588,7 @@ reproduction steps in [the final report](FINAL_ACADEMY_ACCEPTANCE.md).
 | Cookies absent on later requests | Secure/SameSite policy, browser credentials, frontend/backend site topology |
 | Token refresh returns 401 | Expiry, blacklist, account activation state or changed password |
 | Reset response but no email | Response is deliberately generic; check eligibility, worker and `EmailJob` status |
-| Video absent from list | Inspect status/error in admin; both ready variants and a thumbnail are required |
+| Video absent from list | Inspect status/error in admin; ready variants are required; clear a missing thumbnail in admin to repair it |
 | Conversion fails | FFmpeg/FFprobe PATH, source validity, height, writable storage, timeout and disk space |
 | Processing stuck after worker death | Confirm job is stopped, then use explicit `--recover-stopped` recovery |
 | Redis unavailable | Restore service; durable jobs remain recoverable using `retry_jobs` |
@@ -595,13 +639,16 @@ If the remote already contains commits, fetch and inspect its history before
 integrating; do not force-push over existing work. Repository visibility must
 also respect the usage restrictions of the supplied Academy assets.
 
-The final Academy run on 4 November 2026 passed **129/129 tests**, without
-skips or failures, with **97%** application coverage (775 statements, 27 missed).
-All 122 previous tests remain. Added tests cover actual local SMTP delivery,
-mobile/desktop email layouts, lower-resolution video processing and logout.
-Live PostgreSQL/Redis, independent workers, restarts and Nginx/API checks also
-passed separately. See [the final report](FINAL_ACADEMY_ACCEPTANCE.md) and
-[push checklist](GITHUB_SUBMISSION_CHECKLIST.md).
+The mentor follow-up on **10 November 2026** passed **150/150 tests**, including
+all five real browser tests, with **97% coverage** (924 statements, 25 missed).
+All 129 previous tests remain; 21 regression tests were added. A separate
+PostgreSQL run passed all 145 tests outside the browser tag. Independent Docker
+workers, custom image preservation, actual concurrent PostgreSQL publication,
+HTTP access and container recreation with unchanged account/media state also
+passed. See [the current DoD report](VIDEOFLIX_DOD_REPORT.md). The
+[earlier Academy acceptance](FINAL_ACADEMY_ACCEPTANCE.md) records the 4 November
+baseline; [the submission checklist](GITHUB_SUBMISSION_CHECKLIST.md) remains
+available for the separately authorized GitHub push.
 
 ## Academy attribution and publication scope
 

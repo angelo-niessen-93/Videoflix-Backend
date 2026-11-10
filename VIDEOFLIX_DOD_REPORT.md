@@ -1,3 +1,161 @@
+# Videoflix ? Mentor-Nachpr?fung
+
+Pr?fdatum: **10. November 2026**, Europe/Berlin. Ausgangscommit: `f0b3a56`.
+Der Arbeitsbaum war zu Beginn sauber. Bestehende Historie und alle 129 bisherigen
+Tests wurden erhalten; 21 gezielte Regressionstests wurden erg?nzt.
+
+## Ergebnis
+
+**150/150 Tests bestanden, 0 Fehler, 0 Skips**, einschlie?lich f?nf echter
+Edge-Browsertests und der realen FFmpeg-Verarbeitung. Letzter vollst?ndiger Lauf:
+29,999 Sekunden. **97 % Coverage**: 924 Statements, 25 nicht ausgef?hrt,
+899 abgedeckt (97,29 %). Messung unver?ndert mit `--source=accounts,videos,config`;
+Tests und operative Skripte geh?ren nicht zur Anwendungscoverage.
+Zus?tzlich: **145/145 Tests auf PostgreSQL**, Browser per Tag ausgeschlossen,
+keine Fehler und keine Skips, 10,857 Sekunden.
+
+## Umgesetzte Mentor-Punkte
+
+1. **Admin-Login:** Django-Authentifizierungsformular mit `Email address`,
+   E-Mail-Eingabetyp, Autocomplete und passender Fehlermeldung. Eigenst?ndiger
+   `UserAdmin` zeigt E-Mail zuerst. Das bisherige Backend und interne Usernamen
+   bleiben erhalten. Anmeldung mit abweichendem internem Usernamen, Gro?schreibung
+   der E-Mail und unver?ndertem Passwort-Hash gepr?ft; normale Viewer bleiben
+   vom Admin ausgeschlossen. Alle Frontend-Authentifizierungstests bestehen.
+2. **Eigene Thumbnails:** Django validiert Admin-Bilduploads. Beim Ver?ffentlichen
+   l?dt der Worker den aktuellen Datensatz unter PostgreSQL-Zeilensperre neu und
+   erh?lt das eigene Bild. Ohne Upload wird ein Frame erzeugt. Austausch ?ndert
+   ausschlie?lich das Thumbnail; ersetzte ?ffentliche Dateien werden nach Commit
+   und nur ohne verbleibende Referenz gel?scht. Neue Dateinamen vermeiden alte
+   Browser-Caches. Originale und HLS werden anhand von SHA-256-Vergleichen erhalten.
+3. **Entfernen und Wiederherstellen:** Admin-Clear und `ImageField.delete()`
+   stellen bei fertigen Videos das gecachte generierte Bild wieder her oder
+   erzeugen einen Frame aus dem Original. Auch ein extern gel?schtes generiertes
+   Bild wird beim n?chsten HTTP-Bildabruf erkannt, repariert und ?ber eine neue
+   URL ausgeliefert. Videostatus und Dashboard-Sichtbarkeit bleiben erhalten.
+   Bei Extraktionsfehlern wird ein neutrales JPEG angezeigt und der Fehler
+   protokolliert. Erneutes Clear nach Fehlerbehebung startet einen neuen Versuch.
+   Ein externer Media-Proxy muss fehlende Thumbnail-Anfragen an Django reichen.
+4. **Admin-Bezeichnungen:** `Videoflix administration`, `Videoflix admin`,
+   `Content and account management`, `Videos`, `Video title`, `Original video`,
+   `Thumbnail image`, `Processing status`, `Available HLS resolutions`,
+   `Processing error`, `RQ job ID` und `RQ job status`. Der tats?chliche RQ-Status
+   unterscheidet fehlende/abgelaufene Jobs und Redis-Ausf?lle. Die neue Migration
+   ?ndert ausschlie?lich Modelloptionen und Feldbeschriftungen, keine Kontodaten.
+5. **Docstrings und Struktur:** Alle 426 gepr?ften Klassen/Funktionen/Methoden
+   au?erhalb generierter Migrationen und deklarativer `Meta`-Klassen besitzen
+   kurze englische Docstrings. Abgedeckt sind Authentifizierung, Views,
+   Serializer, Services, RQ, FFmpeg/HLS, Konfigurations- und Testhilfen sowie
+   Abnahmeskripte. Ruff pr?ft PEP-257-Regeln; der Code-Regelpr?fer erzwingt auch
+   Docstrings und weiterhin maximal 14 physische Funktionszeilen. Kleine
+   Extraktionen erhalten alle bisherigen Assertions. Eine fokussierte neue
+   `videos/thumbnails.py` b?ndelt die Wiederherstellung; keine gro?e Umstrukturierung.
+6. **Dokumentation und Environment:** `README.md` und `deploy/README.md` sind
+   jetzt englisch und erkl?ren Quickstart, PostgreSQL, Redis, beide Worker,
+   FFmpeg, Admin-Zugang, Tests und das vollst?ndige Thumbnail-Verhalten.
+   `.env.template` bleibt die Docker-Vorlage, `.env.example` wird weiterhin vom
+   nativen Quickstart verwendet und daher bewusst erhalten. Keine echte
+   Environment-Datei wird eingecheckt. Historische Berichte bleiben erkennbar
+   unterhalb dieser neuen Abnahme beziehungsweise als verlinkte fr?here Nachweise.
+
+## Tats?chlich ausgef?hrte Abnahme
+
+| Pr?fung | Ergebnis |
+| --- | --- |
+| Vollst?ndige SQLite-Suite mit `VIDEOFLIX_BROWSER_TESTS=1` | 150 bestanden |
+| PostgreSQL-Suite mit `config.postgres_test_settings`, ohne Browser-Tag | 145 bestanden |
+| Edge: offizielles Frontend, E-Mails, neuer Admin-Thumbnail-Ablauf | 5 bestanden |
+| FFmpeg/FFprobe: drei HLS-Aufl?sungen, Audio, Decode und Thumbnail-Lebenszyklus | PASS |
+| Ruff, Formatierung, PEP-8 und PEP-257 | PASS |
+| 14-Zeilen-Regel, snake_case, Docstring-Abdeckung | PASS |
+| Django-Systemcheck und Deployment-Sicherheitscheck | Keine Befunde |
+| `makemigrations --check --dry-run` | Keine fehlende Migration |
+| Docker Compose-Konfiguration, Build und gesunder Start | PASS |
+| PostgreSQL, echtes Redis, unabh?ngige RQ-Worker, E-Mail und HLS | PASS |
+| Tats?chlicher paralleler PostgreSQL-Admin-/Worker-Zugriff | Sperre und Bilderhalt best?tigt |
+| Custom-Upload ?ber Admin und unabh?ngigen RQ-Worker | Bytegleich erhalten; keine unn?tige Frame-Extraktion |
+| Echter HTTP-Admin mit CSS/JS, API, Thumbnail, HLS und Logout | PASS |
+| Docker-Container neu erstellt | Konten, Passwort-Hashes, Videos und Mediendateien unver?ndert |
+| Bisherige Testmethoden | 129 erhalten, keine entfernt |
+| Git-Diff/Whitespace und Secrets | Gepr?ft; nur Platzhaltervorlagen versioniert |
+
+Reproduzierbarer vollst?ndiger lokaler Lauf (installierte Browser-Abh?ngigkeiten,
+Edge und unver?ndertes Frontend vorausgesetzt):
+
+```powershell
+$env:VIDEOFLIX_BROWSER_TESTS = "1"
+python -m coverage run --source=accounts,videos,config manage.py test tests --settings=config.test_settings --noinput
+python -m coverage report --show-missing
+python -m ruff check .
+python -m ruff check . --select E,W
+python -m ruff format --check .
+python scripts/check_code_rules.py
+python manage.py check --settings=config.test_settings
+python manage.py check --deploy --settings=config.deploy_check_settings
+python manage.py makemigrations --check --dry-run --settings=config.test_settings
+```
+
+Die zus?tzliche PostgreSQL-Suite wurde im isolierten Webcontainer mit
+`python manage.py test tests --settings=config.postgres_test_settings --exclude-tag=browser --noinput`
+ausgef?hrt. Die Live-Pr?fungen liefen per `manage.py shell` ?ber
+`scripts.verify_infrastructure.main()` und `scripts.verify_docker_http.main()`.
+Der neue Parallelit?tsnachweis ist Bestandteil des Infrastrukturpr?fers; dessen
+bestehende Schutzpr?fung verlangt eine dedizierte PostgreSQL-Datenbank mit
+Suffix `_acceptance` und einen lokalen Datei-Mailbackend.
+
+Die PostgreSQL-Nachpr?fung deckte zwei Probleme in Testhilfen auf: bereits
+konsumierte Streaming-Responses konnten beim erneuten Schlie?en die umgebende
+Testtransaktion schlie?en; au?erdem setzte ein Safety-Test SQLite als aktiven
+Testtreiber voraus. Die Hilfen schlie?en Streams jetzt wie Djangos Testclient
+unter vor?bergehend getrenntem Connection-Cleanup-Signal. Der Safety-Test setzt
+den zu pr?fenden SQLite-Treiber explizit. Keine Sicherheitspr?fung und keine
+bestehende fachliche Assertion wurde abgeschw?cht.
+
+Der Docker-Test lief ausschlie?lich im neuen Projekt
+`videoflix-mentor-20261110`, mit eigener Datenbank `videoflix_mentor_acceptance`,
+eigenen Volumes und Port 18010. Der bestehende Stack `videoflix` wurde nicht
+umkonfiguriert. Nach Abschluss wurde nur der Teststack mit `down` gestoppt;
+seine Volumes bleiben erhalten. Die Laufzeitumgebung wurde zweimal aus den
+aktuellen Quellen gebaut; der aktuelle Build wurde nochmals live gepr?ft.
+
+Lokale, ignorierte Nachweise liegen unter `test-results/`: `mentor-tests.log`,
+`mentor-postgres-tests.log`, `mentor-coverage.json`, `mentor-docker-start.log`,
+`mentor-docker-rebuild.log`, `mentor-docker-infrastructure.log`,
+`mentor-docker-http.log`, `mentor-before-state.txt`, `mentor-after-state.txt`
+und `browser/`. Der Vorher-/Nachher-Vergleich umfasst Datenbankwerte aller
+Testkonten und Videos sowie Hashes s?mtlicher ?ffentlicher und privater Medien.
+Environment-Werte und Testpassw?rter stehen nicht im Bericht oder Git-Diff.
+
+## Dateien, Commits und verbleibende Punkte
+
+Neue versionierte Dateien: `videos/thumbnails.py`, `tests/test_admin.py` und
+`videos/migrations/0002_alter_video_options_alter_video_error_and_more.py`.
+Die ?nderungen an bestehenden Python-Dateien erg?nzen vor allem Docstrings;
+funktionale ?nderungen betreffen Admin, Thumbnail-Verarbeitung/-Auslieferung,
+gezielte Testhilfen und Abnahmeskripte. README-, Deployment-, Docker- und
+DoD-Dokumentation enthalten den neuen Stand. Die genaue Dateiliste liefert
+`git show --stat` f?r die lokalen Abschlusscommits.
+
+Die Implementierung ist lokal als `a7f28eb` committed:
+`fix: preserve admin thumbnails and clarify email login`. Der anschlie?ende
+Dokumentationscommit hei?t `docs: record mentor acceptance and setup guidance`.
+Kein Push und kein Force-Push. Beide Commit-IDs stehen im Abschlussbericht
+der Sitzung.
+
+**Keine offenen Funktionsfehler aus diesem Mentor-Auftrag.** Die Migration
+wurde auf der isolierten PostgreSQL-Neuinstallation gepr?ft; bestehende echte
+Nutzerdaten wurden nicht migriert oder bearbeitet. Der fr?her dokumentierte
+Blur-Befund im separat bereitgestellten Frontend bleibt au?erhalb dieses
+Backend-Auftrags; die browsergepr?ften Abl?ufe bestehen unver?ndert.
+
+---
+
+# Historischer Abnahmebericht vom 4. November 2026
+
+Die folgenden Aussagen beziehen sich ausschlie?lich auf den damaligen Stand.
+Die Mentor-Nachpr?fung oben ersetzt dessen Testzahlen und Aussagen ?ber den
+aktuellen Codezustand.
+
 # Videoflix – finale Academy-Abnahme
 
 Prüfdatum: **4. November 2026**, Europe/Berlin. Prüfbasis: der im Auftrag
