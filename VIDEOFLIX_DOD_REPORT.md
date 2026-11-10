@@ -8,8 +8,8 @@ Tests wurden erhalten; 21 gezielte Regressionstests wurden erg?nzt.
 
 **150/150 Tests bestanden, 0 Fehler, 0 Skips**, einschlie?lich f?nf echter
 Edge-Browsertests und der realen FFmpeg-Verarbeitung. Letzter vollst?ndiger Lauf:
-29,999 Sekunden. **97 % Coverage**: 924 Statements, 25 nicht ausgef?hrt,
-899 abgedeckt (97,29 %). Messung unver?ndert mit `--source=accounts,videos,config`;
+30,034 Sekunden. **97 % Coverage**: 925 Statements, 25 nicht ausgef?hrt,
+900 abgedeckt (97,30 %). Messung unver?ndert mit `--source=accounts,videos,config`;
 Tests und operative Skripte geh?ren nicht zur Anwendungscoverage.
 Zus?tzlich: **145/145 Tests auf PostgreSQL**, Browser per Tag ausgeschlossen,
 keine Fehler und keine Skips, 10,857 Sekunden.
@@ -137,10 +137,12 @@ DoD-Dokumentation enthalten den neuen Stand. Die genaue Dateiliste liefert
 `git show --stat` f?r die lokalen Abschlusscommits.
 
 Die Implementierung ist lokal als `a7f28eb` committed:
-`fix: preserve admin thumbnails and clarify email login`. Der anschlie?ende
-Dokumentationscommit hei?t `docs: record mentor acceptance and setup guidance`.
-Kein Push und kein Force-Push. Beide Commit-IDs stehen im Abschlussbericht
-der Sitzung.
+`fix: preserve admin thumbnails and clarify email login`. Die Dokumentation
+folgte als `aee37d1`: `docs: record mentor acceptance and setup guidance`.
+Der Abschlusscommit `fix: display readable RQ job states` stellt die Anzeige
+echter RQ-Enums ohne technischen Pr?fix sicher; anschlie?end bestanden erneut
+alle 150 Tests. Kein Push und kein Force-Push. Alle Commit-IDs stehen im
+Abschlussbericht der Sitzung.
 
 **Keine offenen Funktionsfehler aus diesem Mentor-Auftrag.** Die Migration
 wurde auf der isolierten PostgreSQL-Neuinstallation gepr?ft; bestehende echte

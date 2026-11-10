@@ -52,7 +52,8 @@ class VideoAdmin(admin.ModelAdmin):
             return "Not queued"
         try:
             job = django_rq.get_queue("video").fetch_job(obj.job_id)
-            return job.get_status() if job else "Job expired or missing"
+            status = job.get_status() if job else None
+            return status.value if status else "Job expired or missing"
         except RedisError:
             return "Queue unavailable"
 

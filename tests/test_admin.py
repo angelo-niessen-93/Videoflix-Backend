@@ -12,6 +12,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, TestCase, override_settings, tag
 from PIL import Image
 from redis.exceptions import ConnectionError as RedisConnectionError
+from rq.job import JobStatus
 
 from accounts.models import User
 from videos.admin import VideoAdmin
@@ -123,7 +124,7 @@ class AdminLoginTests(TestCase):
             )
             job = queue.return_value
             job.fetch_job.return_value = job
-            job.get_status.return_value = "finished"
+            job.get_status.return_value = JobStatus.FINISHED
             self.assertEqual(model_admin.rq_job_status(video), "finished")
 
 

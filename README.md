@@ -640,7 +640,7 @@ integrating; do not force-push over existing work. Repository visibility must
 also respect the usage restrictions of the supplied Academy assets.
 
 The mentor follow-up on **10 November 2026** passed **150/150 tests**, including
-all five real browser tests, with **97% coverage** (924 statements, 25 missed).
+all five real browser tests, with **97% coverage** (925 statements, 25 missed).
 All 129 previous tests remain; 21 regression tests were added. A separate
 PostgreSQL run passed all 145 tests outside the browser tag. Independent Docker
 workers, custom image preservation, actual concurrent PostgreSQL publication,
